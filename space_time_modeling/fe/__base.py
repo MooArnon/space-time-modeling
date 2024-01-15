@@ -47,7 +47,10 @@ class BaseFE:
     #------------------------------------------------------------------------#
     
     @staticmethod
-    def label(df: pandas.DataFrame, target_column: str) -> pandas.DataFrame:
+    def add_label(
+            df: pandas.DataFrame, 
+            target_column: str,
+    ) -> pandas.DataFrame:
         """Create label for the data
         attach the label 
 

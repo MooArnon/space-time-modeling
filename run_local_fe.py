@@ -18,6 +18,7 @@ if __name__ == "__main__":
     df_path = os.path.join("tests", "df_test.csv")
     control_column = "Date"
     target_column = "Open"
+    label = "signal"
     
     #---------#
     # Get eda #
@@ -28,11 +29,12 @@ if __name__ == "__main__":
         df = df_path,
         control_column = control_column,
         target_column = target_column,
-        engine = "classification"
+        label = label,
+        engine = "classification",
     )
     
     # label data
-    df = fe.label(
+    df = fe.add_label(
         df = fe.df, 
         target_column = "Open",
     )
@@ -47,6 +49,8 @@ if __name__ == "__main__":
     )
     
     print(df.columns)
+    
+    df.to_csv("test.csv")
     
     
     #------------------------------------------------------------------------#

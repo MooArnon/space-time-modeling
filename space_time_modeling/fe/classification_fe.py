@@ -18,6 +18,7 @@ class ClassificationFE(BaseFE):
             df: Union[str, pd.DataFrame],
             control_column: str,
             target_column: str,
+            label: str = None,
             n_lag: int = 15, 
             n_window: list[int] = [3, 9, 12, 15, 30]
     ) -> None:
@@ -27,6 +28,9 @@ class ClassificationFE(BaseFE):
         # Main attributes
         self.set_control_column(control_column)
         self.set_target_column(target_column)
+        
+        if label:
+            self.set_label(label)
         
         # Function attributes
         self.set_n_lag(n_lag)
@@ -71,6 +75,24 @@ class ClassificationFE(BaseFE):
             Target column
         """
         self.__control_column = column
+    
+    #------------------------------------------------------------------------#
+    
+    @property
+    def label(self) -> str:
+        return self.__label
+    
+    #------------------------------------------------------------------------#
+    
+    def set_label(self, column: str) -> None:
+        """Control column for the class
+
+        Parameters
+        ----------
+        column : str
+            Target column
+        """
+        self.__label = column
         
     #------------------------------------------------------------------------#
     # FE #
@@ -125,6 +147,9 @@ class ClassificationFE(BaseFE):
             fe_name_list: list[str], 
     ) -> pd.DataFrame:
         """Transform df to listed fe
+        Available fe names are `lag_df`, `rolling_df`, 
+        `percent_change_df`, `rsi_df`,
+        
 
         Parameters
         ----------
@@ -137,6 +162,13 @@ class ClassificationFE(BaseFE):
             Returned the transformation
         """
         df = self.df
+        
+        df = self.delete_unused_columns(
+            df = df,
+            target_column = self.target_column,
+            control_column = self.control_column,
+            label = self.label
+        )
         
         # Iterate over plot_name_list
         for fe_name in fe_name_list:
@@ -152,9 +184,9 @@ class ClassificationFE(BaseFE):
             # Execute plot function
             df = fe_function(df)
         
-        df_fe = df.dropna()
+        df.dropna(inplace=True)
         
-        return df_fe
+        return df
     
     #------------------------------------------------------------------------#
     # Element #
@@ -226,8 +258,7 @@ class ClassificationFE(BaseFE):
         pd.DataFrame
             pandas data frame with column `percentage_change`
         """
-        df['percentage_change'] = df[self.target_column].pct_change().shift(1)
-        
+        df['percentage_change'] = df[self.target_column].pct_change()
         return df
     
     #------------------------------------------------------------------------#
