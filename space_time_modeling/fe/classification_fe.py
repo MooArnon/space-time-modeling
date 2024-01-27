@@ -3,6 +3,7 @@
 #----------------------------------------------------------------------------#
 
 import pandas as pd
+import pickle
 from typing import Union
 
 from .__base import BaseFE
@@ -12,7 +13,30 @@ from .__base import BaseFE
 #----------------------------------------------------------------------------#
 
 class ClassificationFE(BaseFE):
+    """
+    ClassificationFE
+    ==========================
+    Feature engineering for regression classification
     
+    Attributes
+    ----------
+    target_column : str
+    control_column : str
+    label : str
+    n_lag : int
+    n_window : list[int]
+    
+    Methods
+    -------
+    transform_df(self, fe_name_list: list[str]) -> pd.DataFrame:
+        Create transformed data frame  followed by name of fe
+        approach in fe_name_list.
+        `lag_df`
+        `rolling_df`
+        `percent_change_df`
+        `rsi_df`
+    """
+    name = 'classification-feature-engineering-instance'
     def __init__(
             self, 
             df: Union[str, pd.DataFrame],
@@ -22,6 +46,24 @@ class ClassificationFE(BaseFE):
             n_lag: int = 15, 
             n_window: list[int] = [3, 9, 12, 15, 30]
     ) -> None:
+        """Initiate `ClassificationFE` instance, inherited base class.
+        
+        Parameters
+        ----------
+        df : Union[str, pd.DataFrame]
+            target transform
+        control_column : str
+            In regression, its name of time control
+        target_column : str
+            Name of target column
+        label : str, optional
+            Name of label column, by default None
+        n_lag : int, optional
+            Number of lag days that need to use, by default 15
+        n_window : list[int], optional
+            List of window that uses to construct the window statistics
+            , by default [3, 9, 12, 15, 30]
+        """
         super().__init__(df)
         
         # Attributes
@@ -42,6 +84,7 @@ class ClassificationFE(BaseFE):
     #------------------------------------------------------------------------#
     # Main #
     #------#
+    
     @property
     def target_column(self) -> str:
         return self.__target_column
@@ -170,18 +213,18 @@ class ClassificationFE(BaseFE):
             label = self.label
         )
         
-        # Iterate over plot_name_list
+        # Iterate over fe_name_list
         for fe_name in fe_name_list:
             
-            # Get function for each plot name, using name
+            # Get function for each fe name, using name
             fe_function = getattr(self, fe_name)
             
-            # Check if the plot function is found
+            # Check if the fe function is found
             if fe_function is None or not callable(fe_function):
                 print(f"Warning: FE function '{fe_name}' not found.")
                 continue
             
-            # Execute plot function
+            # Execute fe function
             df = fe_function(df)
         
         df.dropna(inplace=True)

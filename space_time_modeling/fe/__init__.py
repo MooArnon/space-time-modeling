@@ -13,17 +13,20 @@ from .classification_fe import ClassificationFE
 # Function #
 #----------------------------------------------------------------------------#
 
-def engine(
+def fe_engine(
+        engine: str,
         df: Union[str, pandas.DataFrame],
         control_column: str,
         target_column: str,
-        engine: str,
         **kwargs,
 ) -> BaseFE:
     """Create instance of feature engineering
 
     Parameters
     ==========
+    engine : str
+        Name of engine, now is 
+        `classification`
     df : Union[str, pandas.DataFrame]
         Target data frame, can be either string of path and
         pandas.DataFrame itself
@@ -31,8 +34,6 @@ def engine(
         Stamp column for df, x
     target_column : str
         Value column for df, y
-    engine : str
-        Name of engine, now is ["classification"]
 
     Returns
     =======
