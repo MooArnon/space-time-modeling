@@ -13,11 +13,18 @@ if __name__ == "__main__":
     # Attribute #
     #------------------------------------------------------------------------#
     
-    plots = ["data_date_trend", "pair_plot", "acf_plot", "pacf_plot", "rolling_statistics"]
+    plots = [
+        "data_date_trend", 
+        "pair_plot", 
+        "acf_plot", 
+        "pacf_plot", 
+        "rolling_statistics",
+        "correlation_plot",
+    ]
     
     plot_attribute = {
         "control_column": "Date",
-        "target_column": "Open"
+        "target_column": "Open",
     }
     
     #---------#
@@ -25,8 +32,8 @@ if __name__ == "__main__":
     #------------------------------------------------------------------------#
     
     eda(
-        df = r"tests/BTC-USD.csv",
-        store_at = "test",
+        df = r"result/test.csv",
+        store_at = "result/eda_fed",
         plot = plots,
         plot_attribute = plot_attribute
     )

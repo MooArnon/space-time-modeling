@@ -336,5 +336,44 @@ class TimeSeriesEDA(BaseEDA):
         return plt.gcf()
     
     #------------------------------------------------------------------------#
+    
+    @staticmethod
+    def correlation_plot(
+            df: pd.DataFrame, 
+            control_column: str, 
+            target_column: str, 
+    ) -> plt.axes:
+        """Create rolling stats
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Source data frame
+        control_column : str
+            mock
+        target_column : str
+            mock
+        
+        Returns
+        -------
+        plt.axes
+        """
+        # Exclude none numeric column
+        non_numeric_columns = df.select_dtypes(
+            exclude=['float64', 'int64']    
+        ).columns
+        
+        # Drop none numeric
+        df_numeric = df.drop(columns=non_numeric_columns)
+        
+        # Get correlation
+        df_corr = df_numeric.corr()
+        
+        # Plot
+        plot = sns.heatmap(df_corr)
+        
+        return plot
+    
+    #------------------------------------------------------------------------#
 
 #----------------------------------------------------------------------------#

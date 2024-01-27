@@ -5,6 +5,8 @@
 import os
 
 import pandas as pd
+import pickle
+
 import datetime
 
 #-----------#
@@ -78,4 +80,40 @@ def create_dir_w_timestamp(dir_name: str) -> str:
     
     return dir_name
 
+#----------------------------------------------------------------------------#
+
+def serialize_instance(instance: object, path: str) -> None:
+    """Serialize and export instance  
+
+    Parameters
+    ----------
+    instance : object
+        Target exporting instance
+    path : str
+        Path to export
+    """
+    os.mkdir(path)
+    path = os.path.join(path, f"{instance.name}.pkl")
+    
+    with open(path, "wb") as f:
+        pickle.dump(instance, f)
+        
+#----------------------------------------------------------------------------#
+
+def load_instance(path: str) -> object:
+    """Load instance
+
+    Parameters
+    ----------
+    path : str
+        Part to .pkl file
+
+    Returns
+    -------
+    object
+        Loaded instance
+    """
+    with open(path, "rb") as f:
+        return pickle.load(f)
+    
 #----------------------------------------------------------------------------#

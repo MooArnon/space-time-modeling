@@ -1,0 +1,233 @@
+#--------#
+# Import #
+#----------------------------------------------------------------------------#
+
+import os
+from typing import Union
+
+from pandas.core.api import DataFrame as DataFrame
+from pandas.core.api import Series as Series
+from sklearn.model_selection import train_test_split
+
+from ..utilities import read_df, create_dir_w_timestamp
+
+#---------#
+# Classes #
+#----------------------------------------------------------------------------#
+
+class BaseModel:
+    """Base class for modeling
+    """ 
+    def __init__(
+            self, 
+            df: Union[str, DataFrame],
+            label_column: str, 
+            feature_column: list[str],
+            result_path: str,
+            test_size: float = 0.2,
+    ) -> None:
+        """_summary_
+
+        Parameters
+        ----------
+        df : Union[str, DataFrame]
+            data frame can be 2 types,
+            `str` as path of data frame
+            `DataFrame` as data frame itself
+        label_column : str
+            String of target column
+        feature_column : str
+            String of feature column
+        test_size : float
+            Proportion of test
+        """
+        # Set main attribute
+        self.set_label_column(label_column)
+        self.set_feature_column(feature_column)
+        self.set_df(df)
+        
+        # Set preparing attribute
+        self.set_test_size(test_size)
+        
+        # Path
+        self.result_path = result_path
+    
+    #----------#
+    # Property #
+    #------------------------------------------------------------------------#
+    # Main #
+    #------#
+    
+    @property
+    def df(self) -> DataFrame:
+        """ Target data frame """
+        return self.__df
+        
+    #------------------------------------------------------------------------#
+    
+    def set_df(self, df: Union[str, DataFrame]):
+        """set df attribute
+
+        Parameters
+        ----------
+        df : Union[str, DataFrame]
+            data frame can be 2 types,
+            `str` as path of data frame
+            `DataFrame` as data frame itself
+
+        Raises
+        ------
+        ValueError
+            if type is not string and DataFrame
+        """
+        # Check type of df 
+        if isinstance(df, str):
+            self.__df = read_df(file_path = df)
+        elif isinstance(df, DataFrame):
+            self.__df = df
+        else:
+            raise ValueError(f"{type(df)} is not supported")
+    
+    #------------------------------------------------------------------------#
+    
+    @property
+    def label_column(self) -> str:
+        """ Label column """
+        return self.__label_column
+    
+    #------------------------------------------------------------------------#
+    
+    def set_label_column(self, label_column: str) -> None:
+        """Set label_column attribute
+
+        Parameters
+        ----------
+        label_column : str
+            String of target column
+        """
+        self.__label_column = label_column
+    
+    #------------------------------------------------------------------------#
+    
+    @property
+    def feature_column(self) -> str:
+        """ Feature column """
+        return self.__feature_column
+    
+    #------------------------------------------------------------------------#
+    
+    def set_feature_column(self, feature_column: str) -> None:
+        """Set feature_column attribute
+
+        Parameters
+        ----------
+        feature_column : str
+            String of feature column
+        """
+        self.__feature_column = feature_column
+        
+    #------------------------------------------------------------------------#
+    # preparing #
+    #-----------#
+    
+    @property
+    def test_size(self) -> float:
+        """ Size of test set """
+        return self.__test_size
+    
+    #------------------------------------------------------------------------#
+    
+    def set_test_size(self, test_size: float) -> None:
+        """Set size of test in ratio
+
+        Parameters
+        ----------
+        test_size : float
+            Size of test
+        """
+        self.__test_size = test_size
+    
+    #--------#
+    # Method #
+    #------------------------------------------------------------------------#
+    # Feature prepare #
+    #-----------------#
+    
+    def prepare(
+            self, 
+            df: DataFrame,
+    ) -> tuple[DataFrame, DataFrame, Series, Series]:
+        """Get prepared data for machine learning
+
+        Parameters
+        ----------
+        df : DataFrame
+            FEd data frame
+
+        Returns
+        -------
+        tuple[DataFrame, DataFrame, Series, Series]
+            x_train, x_test, y_train, y_test
+        """
+        label, feature = self.split_feature_label(df)
+        x_train, x_test, y_train, y_test = self.split_test_train(
+            label, 
+            feature,
+        )
+        
+        return x_train, x_test, y_train, y_test
+    
+    #------------------------------------------------------------------------#
+    
+    def split_feature_label(self, df: DataFrame) -> tuple[Series, DataFrame]:
+        """Split feature and label from data frame
+
+        Parameters
+        ----------
+        df : DataFrame
+            Target data frame, contains only nesssary column
+
+        Returns
+        -------
+        tuple[Series, DataFrame]
+            tuple[label, feature]
+        """
+        # Split
+        label = df[self.label_column]
+        feature = df[self.feature_column]
+        
+        return label, feature
+    
+    #------------------------------------------------------------------------#
+    
+    def split_test_train(
+            self, 
+            label: Series,
+            feature: DataFrame,
+    ) -> tuple[DataFrame, DataFrame, Series, Series]:
+        """Split test and train, followed by the elf.test_size
+
+        Parameters
+        ----------
+        label : Series
+            Series of label
+        feature : DataFrame
+            Data frame of feature
+
+        Returns
+        -------
+        tuple[DataFrame, DataFrame, Series, Series]
+            x_train, x_test, y_train, y_test
+        """
+        x_train, x_test, y_train, y_test = train_test_split(
+            feature, 
+            label, 
+            test_size=self.test_size, 
+            random_state=42,
+        )
+        
+        return x_train, x_test, y_train, y_test
+    
+    #------------------------------------------------------------------------#
+
+#----------------------------------------------------------------------------#

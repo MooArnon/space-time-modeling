@@ -4,7 +4,7 @@
 
 import os
 
-from space_time_modeling.fe import engine
+from space_time_modeling.fe import fe_engine
 
 #-----#
 # Use #
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     #------------------------------------------------------------------------#
     
     # Initiate engine
-    fe = engine(
+    fe = fe_engine(
         df = df_path,
         control_column = control_column,
         target_column = target_column,
@@ -39,18 +39,11 @@ if __name__ == "__main__":
         target_column = "Open",
     )
     
-    df = fe.transform_df(
-        [
-            "lag_df",
-            "rolling_df",
-            "percent_change_df",
-            "rsi_df",
-        ]
-    )
+    
     
     print(df.columns)
     
-    df.to_csv("test.csv")
+    df.to_csv("result/preprocessed.csv")
     
     
     #------------------------------------------------------------------------#
