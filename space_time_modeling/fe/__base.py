@@ -23,12 +23,19 @@ class BaseFE:
     
     @property
     def df(self) -> pandas.DataFrame:
+        """Data frame attribute"""
         return self.__df
     
     #------------------------------------------------------------------------#
     
     def set_df(self, df: Union[str, pandas.DataFrame]) -> None:
+        """Set data frame attribute
         
+        Parameters
+        ----------
+        df: Union[str, pandas.DataFrame]
+            Path of df or df itself
+        """
         if isinstance(df, str):
             self.__df = read_df(df)
             
@@ -58,6 +65,8 @@ class BaseFE:
         ----------
         df : pandas.DataFrame
             Target data-frame
+        target_column: str
+            Column to convert to label
 
         Returns
         -------
@@ -74,9 +83,9 @@ class BaseFE:
         df["price_diff_shift"] = df["price_diff"].shift(-1)
         
         # Signal Label
-        df.loc[df["price_diff_shift"] < 0, "signal" ] = "sell"
-        df.loc[df["price_diff_shift"] > 0, "signal" ] = "buy"
-        df.loc[df["price_diff_shift"] == 0, "signal" ] = "still"
+        df.loc[df["price_diff_shift"] < 0, "signal" ] = 0
+        df.loc[df["price_diff_shift"] > 0, "signal" ] = 1
+        df.loc[df["price_diff_shift"] == 0, "signal" ] = 1
         
         return df
     
