@@ -55,7 +55,7 @@ class BaseFE:
     
     @staticmethod
     def add_label(
-            df: pandas.DataFrame, 
+            df: Union[pandas.DataFrame, str], 
             target_column: str,
     ) -> pandas.DataFrame:
         """Create label for the data

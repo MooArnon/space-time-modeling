@@ -84,6 +84,7 @@ class ClassificationFE(BaseFE):
     #------------------------------------------------------------------------#
     # Main #
     #------#
+    
     @property
     def target_column(self) -> str:
         return self.__target_column
