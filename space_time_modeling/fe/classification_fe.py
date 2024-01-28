@@ -3,7 +3,6 @@
 #----------------------------------------------------------------------------#
 
 import pandas as pd
-import pickle
 from typing import Union
 
 from .__base import BaseFE
