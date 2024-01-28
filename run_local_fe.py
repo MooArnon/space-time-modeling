@@ -39,12 +39,19 @@ if __name__ == "__main__":
         target_column = "Open",
     )
     
-    
-    
+    # Get transform
+    df = fe.transform_df(
+        fe_name_list=[
+            "lag_df",
+            "rolling_df",
+            "percent_change_df",
+            "rsi_df",
+        ]
+    )
+
     print(df.columns)
     
-    df.to_csv("result/preprocessed.csv")
-    
+    df.to_csv("preprocessed.csv")
     
     #------------------------------------------------------------------------#
 
