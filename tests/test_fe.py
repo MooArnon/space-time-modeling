@@ -25,6 +25,7 @@ class TestEngineFE:
     
     # Init attribute
     df_path = os.path.join("tests", "df_test.csv")
+    df = pandas.read_csv(os.path.join("tests", "df_test.csv"))
     control_column = "Date"
     target_column = "Open"
     label = "signal"
@@ -35,9 +36,7 @@ class TestEngineFE:
     
     @pytest.fixture
     def engine(self):
-        df_path = os.path.join("tests", "df_test.csv")
         return fe_engine(
-            df = df_path,
             control_column = self.control_column,
             target_column = self.target_column,
             label = self.label,
@@ -46,20 +45,11 @@ class TestEngineFE:
     
     #------------------------------------------------------------------------#
     
-    def test_result_type(self, engine: ClassificationFE):
-        
-        engine.set_df = engine.add_label(
-            df = engine.df, 
-            target_column = "Open",
-        )
+    def test_result_type(self, engine: ClassificationFE, ):
         
         df = engine.transform_df(
-            [
-                "lag_df",
-                "rolling_df",
-                "percent_change_df",
-                "rsi_df",
-            ]
+            df = self.df,
+            serialized=False,
         )
         
         assert type(df) == pandas.DataFrame
@@ -67,23 +57,14 @@ class TestEngineFE:
         
     #------------------------------------------------------------------------#
     
-    def test_result(self, engine: ClassificationFE):
-        
-        engine.set_df = engine.add_label(
-            df = engine.df, 
-            target_column = "Open",
-        )
-        
+    def test_result(self, engine: ClassificationFE, ):
+    
         engine.set_n_lag = 3
         engine.set_n_window = [3, 4, 5]
         
         df = engine.transform_df(
-            [
-                "lag_df",
-                "rolling_df",
-                "percent_change_df",
-                "rsi_df",
-            ]
+            df = self.df,
+            serialized=False,
         )
         
         assert type(df) == pandas.DataFrame
@@ -96,12 +77,12 @@ class TestEngineFE:
 #-------------------#
 
 class TestClassificationFE:
+    df_path = os.path.join("tests", "df_test.csv")
+    df = pandas.read_csv(os.path.join("tests", "df_test.csv"))
     
     @pytest.fixture
     def engine(self):
-        df_path = os.path.join("tests", "df_test.csv")
         return ClassificationFE(
-            df = df_path,
             control_column = "Date",
             target_column = "Open",
         )
@@ -112,29 +93,29 @@ class TestClassificationFE:
     # Return type #
     #-------------#
     
-    def test_lag_df_type(self, engine: ClassificationFE):
+    def test_lag_df_type(self, engine: ClassificationFE, ):
         """ Need to return pandas data frame"""
         
-        df = engine.lag_df(engine.df)
+        df = engine.lag_df(self.df)
         
         assert type(df) == pandas.DataFrame
     
     #------------------------------------------------------------------------#
     
-    def test_rolling_df_type(self, engine: ClassificationFE):
+    def test_rolling_df_type(self, engine: ClassificationFE, ):
         """ Need to return pandas data frame"""
         
-        df = engine.rolling_df(engine.df)
+        df = engine.rolling_df(self.df)
         
         assert type(df) == pandas.DataFrame
     
     #------------------------------------------------------------------------#
     
-    def test_del_df_type(self, engine: ClassificationFE):
+    def test_del_df_type(self, engine: ClassificationFE, ):
         """ Need to return pandas data frame"""
         
         df = engine.delete_unused_columns(
-            df = engine.df,
+            df = self.df,
             target_column = "Open",
             control_column = "Date",
         )
@@ -145,11 +126,11 @@ class TestClassificationFE:
     # Return result #
     #---------------#
     
-    def test_del_df_column(self, engine: ClassificationFE):
+    def test_del_df_column(self, engine: ClassificationFE, ):
         """ Need to return pandas data frame"""
         
         df = engine.delete_unused_columns(
-            df = engine.df,
+            df = self.df,
             target_column = "Open",
             control_column = "Date",
         )
@@ -158,7 +139,7 @@ class TestClassificationFE:
     
     #------------------------------------------------------------------------#
     
-    def test_lag_df_column(self, engine: ClassificationFE):
+    def test_lag_df_column(self, engine: ClassificationFE, ):
         """ Shape and column must be the same """
         
         lag_columns = [
@@ -172,7 +153,7 @@ class TestClassificationFE:
         engine.set_n_lag(5)
         
         df = engine.delete_unused_columns(
-            df = engine.df,
+            df = self.df,
             target_column = "Open",
             control_column = "Date",
         )
@@ -195,7 +176,7 @@ class TestClassificationFE:
     
     #------------------------------------------------------------------------#
     
-    def test_rolling_df_column(self, engine: ClassificationFE):
+    def test_rolling_df_column(self, engine: ClassificationFE, ):
         "Test the rolling method"
         rolling_columns = [
             "mean_3_day",
@@ -207,7 +188,7 @@ class TestClassificationFE:
         ]
         
         df = engine.delete_unused_columns(
-            df = engine.df,
+            df = self.df,
             target_column = "Open",
             control_column = "Date",
         )
@@ -244,7 +225,7 @@ class TestClassificationFE:
         ]
         
         df = engine.delete_unused_columns(
-            df = engine.df,
+            df = self.df,
             target_column = "Open",
             control_column = "Date",
         )

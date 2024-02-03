@@ -14,21 +14,12 @@ from space_time_modeling.utilities import read_df
 
 class BaseFE:
     
-    def __init__(self, df: Union[str, pandas.DataFrame]) -> None:
-        self.set_df(df)
-    
-    #------------#
-    # Properties #
+    #--------#
+    # Method #
     #------------------------------------------------------------------------#
     
-    @property
-    def df(self) -> pandas.DataFrame:
-        """Data frame attribute"""
-        return self.__df
-    
-    #------------------------------------------------------------------------#
-    
-    def set_df(self, df: Union[str, pandas.DataFrame]) -> None:
+    @staticmethod
+    def read_df(df: Union[str, pandas.DataFrame]) -> None:
         """Set data frame attribute
         
         Parameters
@@ -37,10 +28,10 @@ class BaseFE:
             Path of df or df itself
         """
         if isinstance(df, str):
-            self.__df = read_df(df)
+            return read_df(df)
             
         elif isinstance(df, pandas.DataFrame):
-            self.__df = df
+            return df
             
         else: 
             raise ValueError(
@@ -48,18 +39,16 @@ class BaseFE:
                     pandas.DataFrame itself.
                 """
             )
-        
-    #--------#
-    # Method #
+    
     #------------------------------------------------------------------------#
     
     @staticmethod
     def add_label(
-            df: Union[pandas.DataFrame, str], 
+            df: pandas.DataFrame, 
             target_column: str,
     ) -> pandas.DataFrame:
         """Create label for the data
-        attach the label 
+        attach the label , 0 = sell, 1 = buy
 
         Parameters
         ----------
@@ -94,13 +83,15 @@ class BaseFE:
     @abstractmethod
     def transform_df(
             self, 
+            df: Union[str, pandas.DataFrame],
             fe_name_list: list[str], 
+            serialized: bool = False,
     ) -> pandas.DataFrame:
         """To create df based on FE config provided
         This method need to be override on the engine
         """
         pass
-    
+
     #------------------------------------------------------------------------#
     
 #----------------------------------------------------------------------------#

@@ -65,8 +65,12 @@ class TestUtils:
     #------------------------------------------------------------------------#
     
     def test_load_instance(self):
+        for filename in os.listdir("test_mockup"):
+            if filename.startswith("mockup_instance"):
+                mockup_name = filename
+        
         obj:MockUpInstance = load_instance(
-            os.path.join("test_mockup", "mockup_instance.pkl")
+            os.path.join("test_mockup",mockup_name)
         )
         
         assert obj.return_1 == 1

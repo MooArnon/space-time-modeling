@@ -55,6 +55,20 @@ def read_df(file_path: str) -> pd.DataFrame:
 
 #----------------------------------------------------------------------------#
 
+def now_formatted_timestamp() -> str:
+    """Get formatted timestamp
+
+    Returns
+    -------
+    str
+        Formatted timestamp
+    """
+    # Create timestamp
+    time_stamp = datetime.datetime.now()
+    return time_stamp.strftime("%Y%m%d_%H%M%S")
+
+#----------------------------------------------------------------------------#
+
 def create_dir_w_timestamp(dir_name: str) -> str:
     """Create directory with timestamp tag
 
@@ -68,9 +82,7 @@ def create_dir_w_timestamp(dir_name: str) -> str:
     str
         name of directory
     """
-    # Create timestamp
-    time_stamp = datetime.datetime.now()
-    time_stamp_format = time_stamp.strftime("%Y%m%d_%H%M%S")
+    time_stamp_format = now_formatted_timestamp()
     
     # Combine name of dir and time tag
     dir_name = dir_name + "_" + str(time_stamp_format)
@@ -92,12 +104,14 @@ def serialize_instance(instance: object, path: str) -> None:
     path : str
         Path to export
     """
+    time_stamp_format = now_formatted_timestamp()
+    
     os.mkdir(path)
-    path = os.path.join(path, f"{instance.name}.pkl")
+    path = os.path.join(path, f"{instance.name}_{time_stamp_format}.pkl")
     
     with open(path, "wb") as f:
         pickle.dump(instance, f)
-        
+    
 #----------------------------------------------------------------------------#
 
 def load_instance(path: str) -> object:
