@@ -15,7 +15,6 @@ from .classification_fe import ClassificationFE
 
 def fe_engine(
         engine: str,
-        df: Union[str, pandas.DataFrame],
         control_column: str,
         target_column: str,
         **kwargs,
@@ -27,9 +26,6 @@ def fe_engine(
     engine : str
         Name of engine, now is 
         `classification`
-    df : Union[str, pandas.DataFrame]
-        Target data frame, can be either string of path and
-        pandas.DataFrame itself
     control_column : str
         Stamp column for df, x
     target_column : str
@@ -97,7 +93,6 @@ def fe_engine(
     # Check engine
     if engine == "classification":
         fe = ClassificationFE(
-            df = df,
             control_column = control_column,
             target_column = target_column,
             **kwargs,
