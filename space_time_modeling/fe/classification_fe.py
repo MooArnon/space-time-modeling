@@ -2,10 +2,12 @@
 # Import #
 #----------------------------------------------------------------------------#
 
+import os
 import pandas as pd
 from typing import Union
 
 from .__base import BaseFE
+from ..utilities import serialize_instance
 
 #-------#
 # Class #
@@ -35,22 +37,26 @@ class ClassificationFE(BaseFE):
         `percent_change_df`
         `rsi_df`
     """
-    name = 'classification-feature-engineering-instance'
+    name = 'fe'
     def __init__(
-            self, 
-            df: Union[str, pd.DataFrame],
+            self,
             control_column: str,
             target_column: str,
             label: str = None,
+            fe_name_list: list[str] = [
+                "lag_df",
+                "rolling_df",
+                "percent_change_df",
+                "rsi_df",
+            ], 
             n_lag: int = 15, 
-            n_window: list[int] = [3, 9, 12, 15, 30]
+            n_window: list[int] = [3, 9, 12, 15, 30],
+            name: str = None,
     ) -> None:
         """Initiate `ClassificationFE` instance, inherited base class.
         
         Parameters
         ----------
-        df : Union[str, pd.DataFrame]
-            target transform
         control_column : str
             In regression, its name of time control
         target_column : str
@@ -62,8 +68,10 @@ class ClassificationFE(BaseFE):
         n_window : list[int], optional
             List of window that uses to construct the window statistics
             , by default [3, 9, 12, 15, 30]
+        name: str
+            Name of instance
+            , by default None
         """
-        super().__init__(df)
         
         # Attributes
         # Main attributes
@@ -74,15 +82,50 @@ class ClassificationFE(BaseFE):
             self.set_label(label)
         
         # Function attributes
+        self.set_fe_name_list(fe_name_list)
         self.set_n_lag(n_lag)
         self.set_n_window(n_window)
         
+        # Set name of instance
+        self.set_name(name)
         
     #------------#
     # Properties #
     #------------------------------------------------------------------------#
     # Main #
     #------#
+    
+    @property
+    def name(self) -> str:
+        return self.__name
+    
+    #------------------------------------------------------------------------#
+    
+    def set_name(self, name: str = None) -> None:
+        """Set name of instance
+        
+        Parameters
+        ----------
+        name: str
+            If not none, just fe
+        """
+        # Set base name
+        __name = "fe_" if name is None else name
+        
+        # Iterate over fe_name_list
+        for fe_name in self.fe_name_list:
+            if fe_name == "lag_df":
+                __name += f"{self.n_lag}lag_"
+            elif fe_name == "rolling_df":
+                __name += f"{'-'.join([str(x) for x in self.n_window])}rolling_"
+            elif fe_name == "percent_change_df":
+                __name += "percent-change_"
+            elif fe_name == "rsi_df":
+                __name += f"{'-'.join([str(x) for x in self.n_window])}rsi"
+            
+        self.__name = __name
+    
+    #------------------------------------------------------------------------#
     
     @property
     def target_column(self) -> str:
@@ -141,6 +184,30 @@ class ClassificationFE(BaseFE):
     #----#
     
     @property
+    def fe_name_list(self) -> list[str]:
+        """ list of feature engineering component"""
+        return self.__fe_name_list
+    
+    #------------------------------------------------------------------------#
+    
+    def set_fe_name_list(self, fe_name_list: list[str]):
+        """Set fe_name_list
+
+        Parameters
+        ----------
+        fe_name_list : _type_
+            List of fe
+
+        Returns
+        -------
+        list[str]
+            List of fe
+        """
+        self.__fe_name_list = fe_name_list
+    
+    #------------------------------------------------------------------------#
+    
+    @property
     def n_lag(self) -> int:
         """int of number of lag that used in `lag_df`
         """
@@ -186,24 +253,29 @@ class ClassificationFE(BaseFE):
     
     def transform_df(
             self, 
-            fe_name_list: list[str], 
+            df: Union[str, pd.DataFrame],
+            serialized: bool = True,
     ) -> pd.DataFrame:
         """Transform df to listed fe
         Available fe names are `lag_df`, `rolling_df`, 
         `percent_change_df`, `rsi_df`,
         
-
         Parameters
         ----------
+        df: Union[str, pd.DataFrame]
+            Target data frame
         fe_name_list : list[str]
             List of name of transformation
+            if not assign use the default from property.
+        serialized : bool
+            If not None, export the fe instance to working dir
 
         Returns
         -------
         pd.DataFrame
             Returned the transformation
         """
-        df = self.df
+        df = self.read_df(df)
         
         df = self.delete_unused_columns(
             df = df,
@@ -213,7 +285,7 @@ class ClassificationFE(BaseFE):
         )
         
         # Iterate over fe_name_list
-        for fe_name in fe_name_list:
+        for fe_name in self.fe_name_list:
             
             # Get function for each fe name, using name
             fe_function = getattr(self, fe_name)
@@ -227,6 +299,13 @@ class ClassificationFE(BaseFE):
             df = fe_function(df)
         
         df.dropna(inplace=True)
+        
+        # Serialize fe if the path is specified
+        if serialized:
+            serialize_instance(
+                self, 
+                self.name
+            )
         
         return df
     
@@ -403,11 +482,12 @@ class ClassificationFE(BaseFE):
             Result df, it keeps only the target_column and 
             control_column
         """
+        columns = list(df.columns)
         
-        if label:
+        if label in columns:
             df = df[[target_column, control_column, label]]
         
-        elif label is None:
+        elif label not in columns:
             df = df[[target_column, control_column]]
         
         return df

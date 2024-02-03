@@ -3,6 +3,7 @@
 #----------------------------------------------------------------------------#
 
 import os
+import pandas as pd
 
 from space_time_modeling.fe import fe_engine
 
@@ -16,6 +17,8 @@ if __name__ == "__main__":
     #------------------------------------------------------------------------#
     
     df_path = os.path.join("tests", "df_test.csv")
+    df = pd.read_csv(df_path)
+    
     control_column = "Date"
     target_column = "Open"
     label = "signal"
@@ -26,28 +29,30 @@ if __name__ == "__main__":
     
     # Initiate engine
     fe = fe_engine(
-        df = df_path,
         control_column = control_column,
         target_column = target_column,
         label = label,
         engine = "classification",
-    )
-    
-    # label data
-    df = fe.add_label(
-        df = fe.df, 
-        target_column = "Open",
-    )
-    
-    # Get transform
-    df = fe.transform_df(
         fe_name_list=[
             "lag_df",
             "rolling_df",
             "percent_change_df",
             "rsi_df",
-        ]
+        ],
     )
+    
+    # label data
+    df = fe.add_label(
+        df = df, 
+        target_column = "Open",
+    )
+    
+    # Get transform
+    df = fe.transform_df(
+        df = df,
+        serialized = True
+    )
+    
 
     print(df.columns)
     
