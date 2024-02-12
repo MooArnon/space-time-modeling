@@ -17,17 +17,17 @@ if __name__ == "__main__":
     # Attribute #
     #------------------------------------------------------------------------#
     
-    df_path = os.path.join("tests", "df_test.csv")
+    df_path = os.path.join("tests", "BTC-Hourly.csv")
     df = pd.read_csv(df_path)
     
-    control_column = "Date"
-    target_column = "Open"
+    control_column = "date"
+    target_column = "open"
     label = "signal"
     
     #---------#
     # Get eda #
     #------------------------------------------------------------------------#
-    """
+
     # Initiate engine
     fe = fe_engine(
         control_column = control_column,
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     # label data
     df = fe.add_label(
         df = df, 
-        target_column = "Open",
+        target_column = "open",
     )
     
     # Get transform
@@ -59,7 +59,7 @@ if __name__ == "__main__":
     print(df.columns)
     
     df.to_csv("preprocessed.csv")
-    """
+
     """
     pickle_file_path = os.path.join(
         "fe_15lag_3-9-12-15-30rolling_percent-change_3-9-12-15-30rsi",

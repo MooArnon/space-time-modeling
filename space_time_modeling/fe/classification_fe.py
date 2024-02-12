@@ -276,6 +276,10 @@ class ClassificationFE(BaseFE):
         """
         df = self.read_df(df)
         
+        df[self.control_column] = pd.to_datetime(df[self.control_column])
+        
+        df = df.sort_values(by=self.control_column)
+        
         df = self.delete_unused_columns(
             df = df,
             target_column = self.target_column,
