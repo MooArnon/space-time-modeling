@@ -36,6 +36,7 @@ class ClassificationFE(BaseFE):
         `rolling_df`
         `percent_change_df`
         `rsi_df`
+        `date_hour_df`
     """
     name = 'fe'
     def __init__(
@@ -48,6 +49,7 @@ class ClassificationFE(BaseFE):
                 "rolling_df",
                 "percent_change_df",
                 "rsi_df",
+                "date_hour_df"
             ], 
             n_lag: int = 15, 
             n_window: list[int] = [3, 9, 12, 15, 30],
@@ -254,7 +256,7 @@ class ClassificationFE(BaseFE):
     def transform_df(
             self, 
             df: Union[str, pd.DataFrame],
-            serialized: bool = True,
+            serialized: bool = False,
     ) -> pd.DataFrame:
         """Transform df to listed fe
         Available fe names are `lag_df`, `rolling_df`, 
@@ -264,9 +266,6 @@ class ClassificationFE(BaseFE):
         ----------
         df: Union[str, pd.DataFrame]
             Target data frame
-        fe_name_list : list[str]
-            List of name of transformation
-            if not assign use the default from property.
         serialized : bool
             If not None, export the fe instance to working dir
 
@@ -299,6 +298,11 @@ class ClassificationFE(BaseFE):
             df = fe_function(df)
         
         df.dropna(inplace=True)
+        
+        df.drop(
+            columns=[self.target_column, self.control_column], 
+            inplace=True,
+        )
         
         # Serialize fe if the path is specified
         if serialized:
@@ -451,6 +455,44 @@ class ClassificationFE(BaseFE):
         df[f'rsi_{window}'] = rsi
 
         return df
+    
+    #------------------------------------------------------------------------#
+    
+    def date_hour_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Extract `week_of_month`, `date_of_month`, `hour`
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            _description_
+        target_column : str
+            _description_
+        control_column : str
+            _description_
+
+        Returns
+        -------
+        pd.DataFrame
+            _description_
+        """
+        df['datetime_column'] = pd.to_datetime(df[self.control_column])
+
+        # Extract week of the month
+        df['week_of_month'] = (df['datetime_column'].dt.day - 1) // 7 + 1
+
+        # Extract date of the month
+        df['date_of_month'] = df['datetime_column'].dt.day
+
+        # Extract day of the week (0 for Monday, 1 for Tuesday, ..., 6 for Sunday)
+        df['day_of_week'] = df['datetime_column'].dt.dayofweek
+
+        # Extract hour
+        df['hour'] = df['datetime_column'].dt.hour
+        
+        df.drop(columns="datetime_column", inplace=True)
+        
+        return df
+        
         
     #-----------#
     # Utilities #

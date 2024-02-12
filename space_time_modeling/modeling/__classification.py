@@ -21,7 +21,6 @@ class ClassificationModel(BaseModel):
     name = 'modeling-instance'
     def __init__(
             self, 
-            df: Union[str, DataFrame], 
             label_column: str, 
             feature_column: list[str], 
             result_path: str,
@@ -31,7 +30,6 @@ class ClassificationModel(BaseModel):
             xgboost_params_dict: dict = None,
     ) -> None:
         super().__init__(
-            df, 
             label_column, 
             feature_column, 
             result_path, 
@@ -129,17 +127,22 @@ class ClassificationModel(BaseModel):
     
     def modeling(
             self,
+            df : Union[DataFrame, str],
             model_name_list: list[str] = ['xgboost'], 
     ) -> None:
         """Tran and save model in model_name_list
 
         Parameters
         ----------
+        df : Union[DataFrame, str]
+            Could be either path to data frame or data frame itself.
         model_name_list : list[str]
             List of model name
             `xgboost`
         """
-        x_train, x_test, y_train, y_test = self.prepare(self.df)
+        x_train, x_test, y_train, y_test = self.prepare(
+            self.read_df(df)
+        )
         
         # Iterate over model_name_list
         for model_name in model_name_list:

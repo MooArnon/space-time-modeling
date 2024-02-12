@@ -4,8 +4,9 @@
 
 import os
 import pandas as pd
+import pickle
 
-from space_time_modeling.fe import fe_engine
+from space_time_modeling.fe import fe_engine 
 
 #-----#
 # Use #
@@ -26,7 +27,7 @@ if __name__ == "__main__":
     #---------#
     # Get eda #
     #------------------------------------------------------------------------#
-    
+    """
     # Initiate engine
     fe = fe_engine(
         control_column = control_column,
@@ -38,6 +39,7 @@ if __name__ == "__main__":
             "rolling_df",
             "percent_change_df",
             "rsi_df",
+            "date_hour_df",
         ],
     )
     
@@ -57,6 +59,22 @@ if __name__ == "__main__":
     print(df.columns)
     
     df.to_csv("preprocessed.csv")
+    """
+    """
+    pickle_file_path = os.path.join(
+        "fe_15lag_3-9-12-15-30rolling_percent-change_3-9-12-15-30rsi",
+        "fe_15lag_3-9-12-15-30rolling_percent-change_3-9-12-15-30rsi_20240212_195034.pkl"
+    )
+    with open(pickle_file_path, 'rb') as f:
+        # Load the object stored in the pickle file
+        preprocessor = pickle.load(f)
+    
+    df = preprocessor.transform_df(
+        df
+    )
+    
+    df.to_csv("preprocessed.csv")
+    """
     
     #------------------------------------------------------------------------#
 

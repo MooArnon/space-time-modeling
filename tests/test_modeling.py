@@ -29,8 +29,6 @@ class TestEngineFE:
     
     @pytest.fixture
     def engine(self):
-        df_path = os.path.join("tests", "preprocessed.csv")
-        
         label_column = "signal"
         feature_column = [
             'signal', 'lag_1_day', 'lag_2_day',
@@ -45,7 +43,6 @@ class TestEngineFE:
         
         model_engine:ClassificationModel = modeling_engine(
             "classification",
-            df = df_path,
             label_column = label_column,
             feature_column = feature_column,
             result_path = os.path.join("result_tests"),
@@ -58,9 +55,10 @@ class TestEngineFE:
     
     def test_result(self, engine: ClassificationModel):
         """ Modeling properly works """
-        
+        df_path = os.path.join("tests", "preprocessed.csv")
         try:
             engine.modeling(
+                df = df_path,
                 model_name_list = ["xgboost"]
             )
             is_pass = True
