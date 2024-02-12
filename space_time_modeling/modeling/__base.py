@@ -2,14 +2,14 @@
 # Import #
 #----------------------------------------------------------------------------#
 
-import os
 from typing import Union
 
 from pandas.core.api import DataFrame as DataFrame
 from pandas.core.api import Series as Series
 from sklearn.model_selection import train_test_split
 
-from ..utilities import read_df, create_dir_w_timestamp
+from ..utilities import read_df
+from ..fe.__base import BaseFE
 
 #---------#
 # Classes #
@@ -20,13 +20,13 @@ class BaseModel:
     """ 
     def __init__(
             self, 
-            df: Union[str, DataFrame],
             label_column: str, 
             feature_column: list[str],
             result_path: str,
             test_size: float = 0.2,
+            preprocessor: BaseFE = None
     ) -> None:
-        """_summary_
+        """Initiate BaseModel
 
         Parameters
         ----------
@@ -38,34 +38,24 @@ class BaseModel:
             String of target column
         feature_column : str
             String of feature column
-        test_size : float
+        test_size : float = 0.2
             Proportion of test
+        preprocessor: object = None
+            Preprocessor object
         """
         # Set main attribute
         self.set_label_column(label_column)
         self.set_feature_column(feature_column)
-        self.set_df(df)
         
         # Set preparing attribute
         self.set_test_size(test_size)
         
         # Path
         self.result_path = result_path
-    
-    #----------#
-    # Property #
-    #------------------------------------------------------------------------#
-    # Main #
-    #------#
-    
-    @property
-    def df(self) -> DataFrame:
-        """ Target data frame """
-        return self.__df
-        
+
     #------------------------------------------------------------------------#
     
-    def set_df(self, df: Union[str, DataFrame]):
+    def read_df(self, df: Union[str, DataFrame]):
         """set df attribute
 
         Parameters
@@ -82,11 +72,13 @@ class BaseModel:
         """
         # Check type of df 
         if isinstance(df, str):
-            self.__df = read_df(file_path = df)
+            df = read_df(file_path = df)
         elif isinstance(df, DataFrame):
-            self.__df = df
+            df = df
         else:
             raise ValueError(f"{type(df)} is not supported")
+        
+        return df
     
     #------------------------------------------------------------------------#
     
