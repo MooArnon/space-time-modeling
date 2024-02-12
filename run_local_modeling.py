@@ -33,14 +33,13 @@ if __name__ == "__main__":
     #------------------------------------------------------------------------#
     
     modeling = modeling_engine(
-        "classification",
-        df = os.path.join("tests", "preprocessed.csv"),
+        engine = "classification",
         label_column = label_column,
         feature_column = feature_column,
         result_path = os.path.join("result"),
     )
     
-    modeling.modeling()
+    modeling.modeling(df = os.path.join("tests", "preprocessed.csv"),)
     
     #------------------------------------------------------------------------#
 

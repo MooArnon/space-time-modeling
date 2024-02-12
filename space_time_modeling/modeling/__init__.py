@@ -15,7 +15,6 @@ from .__classification import ClassificationModel
 
 def modeling_engine(
         engine: str,
-        df: Union[str, DataFrame],
         label_column: str,
         feature_column: list[str],
         result_path: str,
@@ -73,7 +72,6 @@ def modeling_engine(
     """
     if engine == 'classification':
         modeling = ClassificationModel(
-            df,
             label_column,
             feature_column,
             result_path,
