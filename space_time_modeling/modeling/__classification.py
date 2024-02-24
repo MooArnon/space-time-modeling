@@ -3,11 +3,14 @@
 #----------------------------------------------------------------------------#
 
 import os
+import pickle
 from typing import Union
 
+from catboost import CatBoostClassifier, Pool
 from pandas.core.api import DataFrame, Series
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import classification_report
+from sklearn.svm import SVC
 from scipy.stats import uniform, randint
 import xgboost as xgb
 
@@ -21,13 +24,15 @@ class ClassificationModel(BaseModel):
     name = 'modeling-instance'
     def __init__(
             self, 
-            label_column: str, 
-            feature_column: list[str], 
-            result_path: str,
+            label_column: str = None, 
+            feature_column: list[str] = None, 
+            result_path: str = None,
             test_size: float = 0.2,
-            n_iter: int = 30,
+            n_iter: int = 15,
             cv: int = 5,
             xgboost_params_dict: dict = None,
+            catboost_params_dict: dict = None,
+            svc_params_dict: dict = None,
     ) -> None:
         super().__init__(
             label_column, 
@@ -41,10 +46,12 @@ class ClassificationModel(BaseModel):
         self.set_cv(cv)
         
         # Set attribute for model
-        ## XGBoost
         self.set_xgboost_params_dict(xgboost_params_dict)
+        self.set_catboost_params_dict(catboost_params_dict)
+        self.set_svc_params_dict(svc_params_dict)
         
-        os.mkdir(result_path)
+        if not os.path.exists(self.result_path):
+            os.mkdir(self.result_path)
         
     #------------#
     # Properties #
@@ -90,7 +97,9 @@ class ClassificationModel(BaseModel):
     
     #------------------------------------------------------------------------#
     # Model #
-    #-------#
+    #---------#
+    # XGBoost #
+    #---------#
     
     @property
     def xgboost_params_dict(self):
@@ -114,12 +123,72 @@ class ClassificationModel(BaseModel):
             xgboost_params_dict = {
                 'learning_rate': uniform(0.001, 0.9),
                 'n_estimators': randint(10, 1000),
-                'max_depth': randint(3, 60),
+                'max_depth': [2, 6, 8, 12, 16, 24, 30, 40, 50],
                 'subsample': uniform(0.1, 0.9),
                 'colsample_bytree': uniform(0.1, 0.9),
                 'gamma': uniform(0, 0.9)
             }
         self.__xgboost_params_dict = xgboost_params_dict
+    
+    #------------------------------------------------------------------------#
+    # CatBoost #
+    #----------#
+    
+    @property
+    def catboost_params_dict(self):
+        """ parameter of CatBoost model for random search """
+        return self.__catboost_params_dict
+
+    #------------------------------------------------------------------------#
+    
+    def set_catboost_params_dict(
+            self, 
+            catboost_params_dict: dict = None
+    ) -> None:
+        """Set parameter of XGBoost model for random search
+
+        Parameters
+        ----------
+        catboost_params_dict : dict, optional
+            Parameters, by default None
+        """
+        if catboost_params_dict is None:
+            catboost_params_dict = {
+                'iterations': randint(10, 500),
+                'learning_rate': uniform(0.001, 0.9),
+                'depth': randint(2, 16),
+            }
+        self.__catboost_params_dict = catboost_params_dict
+        
+    #------------------------------------------------------------------------#
+    # svc #
+    #----------#
+    
+    @property
+    def svc_params_dict(self):
+        """ parameter of CatBoost model for random search """
+        return self.__svc_params_dict
+
+    #------------------------------------------------------------------------#
+    
+    def set_svc_params_dict(
+            self, 
+            svc_params_dict: dict = None
+    ) -> None:
+        """Set parameter of XGBoost model for random search
+
+        Parameters
+        ----------
+        catboost_params_dict : dict, optional
+            Parameters, by default None
+        """
+        if svc_params_dict is None:
+            svc_params_dict = {
+                'C': [0.01, 0.1, 1, 10, 50, 100],
+                'gamma': [1, 0.5, 0.1, 0.05, 0.01, 0.005, 0.001],
+                'kernel': ['rbf', 'linear', 'poly', 'sigmoid']
+            }
+        self.__svc_params_dict = svc_params_dict
             
     #----------#
     # Modeling #
@@ -128,7 +197,7 @@ class ClassificationModel(BaseModel):
     def modeling(
             self,
             df : Union[DataFrame, str],
-            model_name_list: list[str] = ['xgboost'], 
+            model_name_list: list[str] = ['xgboost', 'catboost', 'svc'], 
     ) -> None:
         """Tran and save model in model_name_list
 
@@ -138,7 +207,7 @@ class ClassificationModel(BaseModel):
             Could be either path to data frame or data frame itself.
         model_name_list : list[str]
             List of model name
-            `xgboost`
+            `xgboost`, `catboost`, `svc`
         """
         x_train, x_test, y_train, y_test = self.prepare(
             self.read_df(df)
@@ -233,7 +302,143 @@ class ClassificationModel(BaseModel):
         model.load_model(model_path)
         
         return model
+    
+    #------------------------------------------------------------------------#
+    # Cat Boost #
+    #-----------#
+    
+    def catboost(
+            self,
+            x_train: DataFrame, 
+            x_test: DataFrame, 
+            y_train: Series, 
+            y_test: Series, 
+    ) -> CatBoostClassifier:
+        """Cat boosting model
+
+        Parameters
+        ----------
+        x_train : DataFrame
+            x train as pandas data-frame
+        x_test : DataFrame
+            x test as pandas data-frame
+        y_train : Series
+            y train as pandas data-series
+        y_test : Series
+            y test as pandas data-series
+
+        Returns
+        -------
+        CatBoostClassifier
+            Catboost model
+        """
+        # Create dataset objects for CatBoost
+        # train_pool = Pool(data=x_train, label=y_train)
+        # test_pool = Pool(data=x_test, label=y_test)
         
+        # Print line separate
+        print("\n", "-"*72)
+        print("Tuning CatBoost")
+        
+        model = CatBoostClassifier(
+            devices="0",
+            loss_function = "Logloss",
+            eval_metric = "AUC",
+            verbose = False
+        )
+        
+        # Get random search
+        tuned_model = self.random_search(
+            model,
+            self.catboost_params_dict,
+            x_train,
+            x_test,
+            y_train,
+            y_test,
+        )
+        
+        self.save_catboost(tuned_model)
+        
+    #------------------------------------------------------------------------#
+    
+    def save_catboost(self, model: CatBoostClassifier) -> None:
+        path = os.path.join(self.result_path, 'catboost.bin')
+        model.save_model(path)
+    
+    #------------------------------------------------------------------------#
+    
+    @staticmethod
+    def load_catboost(model_path: str) -> CatBoostClassifier:
+        """Load cat boost model"""
+        model = CatBoostClassifier()
+        model.load_model(model_path)
+        
+        return model
+    
+    #------------------------------------------------------------------------#
+    # SVC #
+    #-----#
+    
+    def svc(self,
+            x_train: DataFrame, 
+            x_test: DataFrame, 
+            y_train: Series, 
+            y_test: Series, 
+    ) -> SVC:
+        """SVC model
+
+        Parameters
+        ----------
+        x_train : DataFrame
+            x train as pandas data-frame
+        x_test : DataFrame
+            x test as pandas data-frame
+        y_train : Series
+            y train as pandas data-series
+        y_test : Series
+            y test as pandas data-series
+        
+        Returns
+        -------
+        SVC
+            SVC model
+        """
+        print("\n", "-"*72)
+        print("Tuning SVC")
+        model = SVC()
+        
+        # Get random search
+        tuned_model = self.random_search(
+            model,
+            self.svc_params_dict,
+            x_train,
+            x_test,
+            y_train,
+            y_test,
+        )
+        self.save_svc(tuned_model)
+        
+    #------------------------------------------------------------------------#
+    
+    def save_svc(self, model: CatBoostClassifier) -> None:
+        # Save the model
+        path = os.path.join(self.result_path, 'svc.pkl')
+        with open(f'{path}', 'wb') as f:
+            pickle.dump(model, f)
+        
+        model.save_model(path)
+    
+    #------------------------------------------------------------------------#
+    
+    @staticmethod
+    def load_svc(model_path: str) -> CatBoostClassifier:
+        """Load cat boost model"""
+        
+        with open(model_path, 'rb') as f:
+            model = pickle.load(f)
+        
+        return model
+    
     #-----------#
     # Utilities #
     #------------------------------------------------------------------------#
@@ -269,6 +474,7 @@ class ClassificationModel(BaseModel):
         any
             Fine tuned model
         """
+        print(param_dict)
         random_search = RandomizedSearchCV(
             model, 
             param_distributions=param_dict, 
@@ -276,6 +482,7 @@ class ClassificationModel(BaseModel):
             cv=self.cv, 
             random_state=42,
             verbose = 2,
+            scoring="f1",
         )
         # Fit the model to the training data
         random_search.fit(x_train, y_train)
