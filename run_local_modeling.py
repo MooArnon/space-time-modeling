@@ -44,7 +44,6 @@ if __name__ == "__main__":
     
     modeling.modeling(
         df = os.path.join("tests", "preprocessed.csv"),
-        # model_name_list = ["catboost"]
     )
     
     #------------#

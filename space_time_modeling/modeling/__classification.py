@@ -7,10 +7,12 @@ import pickle
 from typing import Union
 
 from catboost import CatBoostClassifier, Pool
+import pandas as pd
 from pandas.core.api import DataFrame, Series
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import classification_report
 from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
 from scipy.stats import uniform, randint
 import xgboost as xgb
 
@@ -33,6 +35,7 @@ class ClassificationModel(BaseModel):
             xgboost_params_dict: dict = None,
             catboost_params_dict: dict = None,
             svc_params_dict: dict = None,
+            random_forest_params_dict: dict = None,
     ) -> None:
         super().__init__(
             label_column, 
@@ -49,6 +52,7 @@ class ClassificationModel(BaseModel):
         self.set_xgboost_params_dict(xgboost_params_dict)
         self.set_catboost_params_dict(catboost_params_dict)
         self.set_svc_params_dict(svc_params_dict)
+        self.set_random_forest_params_dict(random_forest_params_dict)
         
         if not os.path.exists(self.result_path):
             os.mkdir(self.result_path)
@@ -162,7 +166,7 @@ class ClassificationModel(BaseModel):
         
     #------------------------------------------------------------------------#
     # svc #
-    #----------#
+    #-----#
     
     @property
     def svc_params_dict(self):
@@ -186,9 +190,42 @@ class ClassificationModel(BaseModel):
             svc_params_dict = {
                 'C': [0.01, 0.1, 1, 10, 50, 100],
                 'gamma': [1, 0.5, 0.1, 0.05, 0.01, 0.005, 0.001],
-                'kernel': ['rbf', 'linear', 'poly', 'sigmoid']
+                'kernel': ['linear', 'rbf', 'poly', 'sigmoid']
             }
         self.__svc_params_dict = svc_params_dict
+        
+    #------------------------------------------------------------------------#
+    # Random Forest #
+    #---------------#
+    
+    @property
+    def random_forest_params_dict(self):
+        """ parameter of CatBoost model for random search """
+        return self.__random_forest_params_dict
+
+    #------------------------------------------------------------------------#
+    
+    def set_random_forest_params_dict(
+            self, 
+            random_forest_params_dict: dict = None
+    ) -> None:
+        """Set parameter of Random forest model for random search
+
+        Parameters
+        ----------
+        random_forest_params_dict : dict, optional
+            Parameters, by default None
+        """
+        if random_forest_params_dict is None:
+            random_forest_params_dict = {
+                'n_estimators': randint(10, 1000),  
+                'max_features': ['log2', 'sqrt'],
+                'max_depth': randint(10, 100), 
+                'min_samples_split': randint(2, 100),  
+                'min_samples_leaf': randint(1, 12), 
+                'bootstrap': [True, False]  
+            }
+        self.__random_forest_params_dict = random_forest_params_dict
             
     #----------#
     # Modeling #
@@ -197,7 +234,12 @@ class ClassificationModel(BaseModel):
     def modeling(
             self,
             df : Union[DataFrame, str],
-            model_name_list: list[str] = ['xgboost', 'catboost', 'svc'], 
+            model_name_list: list[str] = [
+                'xgboost', 
+                'catboost', 
+                # 'svc',
+                'random_forest'
+            ], 
     ) -> None:
         """Tran and save model in model_name_list
 
@@ -207,7 +249,7 @@ class ClassificationModel(BaseModel):
             Could be either path to data frame or data frame itself.
         model_name_list : list[str]
             List of model name
-            `xgboost`, `catboost`, `svc`
+            `xgboost`, `catboost`, `svc`, `random_forest`
         """
         x_train, x_test, y_train, y_test = self.prepare(
             self.read_df(df)
@@ -405,7 +447,7 @@ class ClassificationModel(BaseModel):
         """
         print("\n", "-"*72)
         print("Tuning SVC")
-        model = SVC()
+        model = SVC(verbose=True)
         
         # Get random search
         tuned_model = self.random_search(
@@ -433,6 +475,68 @@ class ClassificationModel(BaseModel):
     @staticmethod
     def load_svc(model_path: str) -> CatBoostClassifier:
         """Load cat boost model"""
+        
+        with open(model_path, 'rb') as f:
+            model = pickle.load(f)
+        
+        return model
+    
+    #------------------------------------------------------------------------#
+    # Random forest #
+    #---------------#
+    
+    def random_forest(self,
+            x_train: DataFrame, 
+            x_test: DataFrame, 
+            y_train: Series, 
+            y_test: Series, 
+    ) -> RandomForestClassifier:
+        """Random forest model
+
+        Parameters
+        ----------
+        x_train : DataFrame
+            x train as pandas data-frame
+        x_test : DataFrame
+            x test as pandas data-frame
+        y_train : Series
+            y train as pandas data-series
+        y_test : Series
+            y test as pandas data-series
+        
+        Returns
+        -------
+        RandomForestClassifier
+            Random Forest Classifier model
+        """
+        print("\n", "-"*72)
+        print("Tuning SVC")
+        model = RandomForestClassifier()
+        
+        # Get random search
+        tuned_model = self.random_search(
+            model,
+            self.random_forest_params_dict,
+            x_train,
+            x_test,
+            y_train,
+            y_test,
+        )
+        self.save_random_forest(tuned_model)
+        
+    #------------------------------------------------------------------------#
+    
+    def save_random_forest(self, model: CatBoostClassifier) -> None:
+        # Save the model
+        path = os.path.join(self.result_path, 'random_forest.pkl')
+        with open(f'{path}', 'wb') as f:
+            pickle.dump(model, f)
+    
+    #------------------------------------------------------------------------#
+    
+    @staticmethod
+    def load_random_forest(model_path: str) -> CatBoostClassifier:
+        """Load random forest boost model"""
         
         with open(model_path, 'rb') as f:
             model = pickle.load(f)
@@ -481,7 +585,7 @@ class ClassificationModel(BaseModel):
             n_iter=self.n_iter, 
             cv=self.cv, 
             random_state=42,
-            verbose = 2,
+            verbose = 10,
             scoring="f1",
         )
         # Fit the model to the training data
@@ -496,8 +600,16 @@ class ClassificationModel(BaseModel):
         y_pred = best_model.predict(x_test)
 
         # Evaluate the model
-        accuracy = classification_report(y_test, y_pred)
-        print("Classification Report:\n", accuracy)
+        report = classification_report(y_test, y_pred, output_dict=True)
+        
+        # Convert the classification report to a DataFrame
+        df_classification_report = pd.DataFrame(report).transpose()
+
+        # Save the classification report DataFrame to a CSV file
+        df_classification_report.to_csv(
+            os.path.join(self.result_path, f'{type(model)}.csv'), 
+            index=True,
+        )
         
         return best_model
     
