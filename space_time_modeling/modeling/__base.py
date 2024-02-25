@@ -2,6 +2,7 @@
 # Import #
 #----------------------------------------------------------------------------#
 
+from datetime import datetime
 from typing import Union
 
 from pandas.core.api import DataFrame as DataFrame
@@ -20,9 +21,9 @@ class BaseModel:
     """ 
     def __init__(
             self, 
-            label_column: str, 
-            feature_column: list[str],
-            result_path: str,
+            label_column: str = None, 
+            feature_column: list[str] = None,
+            result_path: str = None,
             test_size: float = 0.2,
             preprocessor: BaseFE = None
     ) -> None:
@@ -51,7 +52,9 @@ class BaseModel:
         self.set_test_size(test_size)
         
         # Path
-        self.result_path = result_path
+        now = datetime.now()
+        formatted_datetime = now.strftime("%Y%m%d_%H%M%S")
+        self.result_path = f"{result_path}_{formatted_datetime}"
 
     #------------------------------------------------------------------------#
     
@@ -166,7 +169,6 @@ class BaseModel:
             label, 
             feature,
         )
-        
         return x_train, x_test, y_train, y_test
     
     #------------------------------------------------------------------------#
@@ -184,6 +186,9 @@ class BaseModel:
         tuple[Series, DataFrame]
             tuple[label, feature]
         """
+        if self.label_column in self.feature_column:
+            self.feature_column.remove(self.label_column)
+        
         # Split
         label = df[self.label_column]
         feature = df[self.feature_column]
