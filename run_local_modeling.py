@@ -19,7 +19,7 @@ if __name__ == "__main__":
     
     df_path = os.path.join("result", "preprocessed.csv")
     label_column = "signal"
-    feature_column = [
+    feature_column = [ "signal",
         'lag_1_day', 'lag_2_day',
         'lag_3_day',  'lag_4_day', 'lag_5_day', 'lag_6_day', 'lag_7_day',
         'lag_8_day',  'lag_9_day', 'lag_10_day', 'lag_11_day', 'lag_12_day',

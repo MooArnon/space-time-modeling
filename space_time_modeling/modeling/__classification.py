@@ -510,7 +510,7 @@ class ClassificationModel(BaseModel):
             Random Forest Classifier model
         """
         print("\n", "-"*72)
-        print("Tuning SVC")
+        print("Tuning Random forest")
         model = RandomForestClassifier()
         
         # Get random search

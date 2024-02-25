@@ -119,6 +119,8 @@ class BaseModel:
         feature_column : str
             String of feature column
         """
+        if self.label_column in feature_column:
+            feature_column.remove(self.label_column)
         self.__feature_column = feature_column
         
     #------------------------------------------------------------------------#
