@@ -2,6 +2,7 @@
 # Import #
 #----------------------------------------------------------------------------#
 
+import glob
 import os
 import shutil
 
@@ -72,26 +73,24 @@ class TestEngineFE:
     
     def readable_model(self, engine: ClassificationModel):
         
+        pattern = "result_tests*"
+        
+        matching_directories = glob.glob(pattern)[0]
+        
         try:
             engine.load_xgboost(
-                os.path.join("result_tests", "xgboost.xgb")
+                os.path.join(matching_directories, "xgboost.xgb")
             )
             is_pass = True
         
         except:
             is_pass = False
         
+        finally:
+            shutil.rmtree(matching_directories)
+        
         assert is_pass
-    
-    #------------------------------------------------------------------------#
-    
-    def test_delete_result(self):
-        shutil.rmtree("result_tests")
-    
-    #------------------------------------------------------------------------#
-    
-    
-    
+
     #------------------------------------------------------------------------#
     
 #----------------------------------------------------------------------------#
