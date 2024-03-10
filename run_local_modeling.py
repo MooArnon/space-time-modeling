@@ -2,8 +2,10 @@
 # Import #
 #----------------------------------------------------------------------------#
 
-import random
+import pickle
 import os
+
+import pandas as pd
 
 from space_time_modeling.modeling import modeling_engine
 from space_time_modeling.modeling import ClassificationModel
@@ -17,7 +19,13 @@ if __name__ == "__main__":
     # Attribute #
     #------------------------------------------------------------------------#
     
-    df_path = os.path.join("result", "preprocessed.csv")
+    pickle_preprocess_path = os.path.join(
+        "fe_15lag_3-9-12-15-30rolling_percent-change_3-9-12-15-30rsi",
+        "fe_15lag_3-9-12-15-30rolling_percent-change_3-9-12-15-30rsi_20240310_093347.pkl"
+    )
+    
+    df_path = os.path.join("local", "BTC-Hourly.csv")
+    
     label_column = "signal"
     feature_column = [ "signal",
         'lag_1_day', 'lag_2_day',
@@ -30,6 +38,26 @@ if __name__ == "__main__":
     ]
     label = "signal"
     
+    #-----------------#
+    # Preprocess data #
+    #------------------------------------------------------------------------#
+    
+    df = pd.read_csv(df_path)
+    
+    with open(pickle_preprocess_path, 'rb') as f:
+        
+        # Load the object stored in the pickle file
+        preprocessor = pickle.load(f)
+        
+    df = preprocessor.add_label(
+        df = df, 
+        target_column = "open",
+    )
+    
+    df = preprocessor.transform_df(
+        df
+    )
+    
     #-----------#
     # Get model #
     #------------------------------------------------------------------------#
@@ -38,12 +66,13 @@ if __name__ == "__main__":
         engine = "classification",
         label_column = label_column,
         feature_column = feature_column,
-        result_path = os.path.join("test_catboost"),
+        result_path = os.path.join("test_lr_knn"),
         n_iter = 1,
     )
     
     modeling.modeling(
-        df = os.path.join("tests", "preprocessed.csv"),
+        df = df,
+        model_name_list=["logistic_regression", "knn"]
     )
     
     #------------#

@@ -13,6 +13,8 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import classification_report
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
 from scipy.stats import uniform, randint
 import xgboost as xgb
 
@@ -36,6 +38,8 @@ class ClassificationModel(BaseModel):
             catboost_params_dict: dict = None,
             svc_params_dict: dict = None,
             random_forest_params_dict: dict = None,
+            logistic_regression_params_dict: dict = None,
+            knn_params_dict: dict = None,
     ) -> None:
         super().__init__(
             label_column, 
@@ -53,6 +57,8 @@ class ClassificationModel(BaseModel):
         self.set_catboost_params_dict(catboost_params_dict)
         self.set_svc_params_dict(svc_params_dict)
         self.set_random_forest_params_dict(random_forest_params_dict)
+        self.set_logistic_regression_params_dict(logistic_regression_params_dict)
+        self.set_knn_params_dict(knn_params_dict)
         
         if not os.path.exists(self.result_path):
             os.mkdir(self.result_path)
@@ -226,7 +232,66 @@ class ClassificationModel(BaseModel):
                 'bootstrap': [True, False]  
             }
         self.__random_forest_params_dict = random_forest_params_dict
-            
+    
+    #------------------------------------------------------------------------#
+    # Random Forest #
+    #---------------#
+    
+    @property
+    def logistic_regression_params_dict(self):
+        """ parameter of Logistic regression model for random search """
+        return self.__logistic_regression_params_dict
+    
+    #------------------------------------------------------------------------#
+    
+    def set_logistic_regression_params_dict(
+            self, 
+            logistic_regression_params_dict: dict = None
+    ) -> None:
+        """Set parameter of Random forest model for random search
+
+        Parameters
+        ----------
+        random_forest_params_dict : dict, optional
+            Parameters, by default None
+        """
+        if logistic_regression_params_dict is None:
+            logistic_regression_params_dict = {
+                'C': uniform(loc=0, scale=4),
+                'penalty': ['l1', 'l2'] 
+            }
+        self.__logistic_regression_params_dict = logistic_regression_params_dict
+        
+    #------------------------------------------------------------------------#
+    # KNN #
+    #-----#
+    
+    @property
+    def knn_params_dict(self):
+        """ parameter of Logistic regression model for random search """
+        return self.__knn_params_dict
+    
+    #------------------------------------------------------------------------#
+    
+    def set_knn_params_dict(
+            self, 
+            knn_params_dict: dict = None
+    ) -> None:
+        """Set parameter of Random forest model for random search
+
+        Parameters
+        ----------
+        random_forest_params_dict : dict, optional
+            Parameters, by default None
+        """
+        if knn_params_dict is None:
+            knn_params_dict = {
+                'n_neighbors': randint(1, 50),
+                'weights': ['uniform', 'distance'],  
+                'p': [1, 2] 
+            }
+        self.__knn_params_dict = knn_params_dict
+    
     #----------#
     # Modeling #
     #------------------------------------------------------------------------#
@@ -238,7 +303,9 @@ class ClassificationModel(BaseModel):
                 'xgboost', 
                 'catboost', 
                 # 'svc',
-                'random_forest'
+                'random_forest',
+                'logistic_regression',
+                'knn',
             ], 
     ) -> None:
         """Tran and save model in model_name_list
@@ -249,7 +316,8 @@ class ClassificationModel(BaseModel):
             Could be either path to data frame or data frame itself.
         model_name_list : list[str]
             List of model name
-            `xgboost`, `catboost`, `svc`, `random_forest`
+            `xgboost`, `catboost`, `svc`, 
+            `random_forest`, `logistic_regression`, `knn`
         """
         x_train, x_test, y_train, y_test = self.prepare(
             self.read_df(df)
@@ -543,6 +611,130 @@ class ClassificationModel(BaseModel):
         
         return model
     
+    #------------------------------------------------------------------------#
+    # Logistic regression #
+    #---------------------#
+    
+    def logistic_regression(self,
+            x_train: DataFrame, 
+            x_test: DataFrame, 
+            y_train: Series, 
+            y_test: Series, 
+    ) -> LogisticRegression:
+        """Logistic regression model
+
+        Parameters
+        ----------
+        x_train : DataFrame
+            x train as pandas data-frame
+        x_test : DataFrame
+            x test as pandas data-frame
+        y_train : Series
+            y train as pandas data-series
+        y_test : Series
+            y test as pandas data-series
+        
+        Returns
+        -------
+        LogisticRegression
+            Logistic regression model
+        """
+        print("\n", "-"*72)
+        print("Tuning Logistic regression")
+        model = LogisticRegression(solver='saga', max_iter=10000)
+        
+        # Get random search
+        tuned_model = self.random_search(
+            model,
+            self.logistic_regression_params_dict,
+            x_train,
+            x_test,
+            y_train,
+            y_test,
+        )
+        self.save_logistic_regression(tuned_model)
+        
+    #------------------------------------------------------------------------#
+    
+    def save_logistic_regression(self, model: CatBoostClassifier) -> None:
+        # Save the model
+        path = os.path.join(self.result_path, 'logistic_regression.pkl')
+        with open(f'{path}', 'wb') as f:
+            pickle.dump(model, f)
+    
+    #------------------------------------------------------------------------#
+    
+    @staticmethod
+    def load_logistic_regression(model_path: str) -> CatBoostClassifier:
+        """Load random forest boost model"""
+        
+        with open(model_path, 'rb') as f:
+            model = pickle.load(f)
+        
+        return model
+    
+    #------------------------------------------------------------------------#
+    # Logistic regression #
+    #---------------------#
+    
+    def knn(self,
+            x_train: DataFrame, 
+            x_test: DataFrame, 
+            y_train: Series, 
+            y_test: Series, 
+    ) -> LogisticRegression:
+        """KNN model
+
+        Parameters
+        ----------
+        x_train : DataFrame
+            x train as pandas data-frame
+        x_test : DataFrame
+            x test as pandas data-frame
+        y_train : Series
+            y train as pandas data-series
+        y_test : Series
+            y test as pandas data-series
+        
+        Returns
+        -------
+        LogisticRegression
+            Random Forest Classifier model
+        """
+        print("\n", "-"*72)
+        print("Tuning Logistic regression")
+        model = KNeighborsClassifier()
+        
+        # Get random search
+        tuned_model = self.random_search(
+            model,
+            self.knn_params_dict,
+            x_train,
+            x_test,
+            y_train,
+            y_test,
+        )
+        self.save_knn(tuned_model)
+        
+    #------------------------------------------------------------------------#
+    
+    def save_knn(self, model: CatBoostClassifier) -> None:
+        # Save the model
+        path = os.path.join(self.result_path, 'knn.pkl')
+        with open(f'{path}', 'wb') as f:
+            pickle.dump(model, f)
+    
+    #------------------------------------------------------------------------#
+    
+    @staticmethod
+    def load_knn(model_path: str) -> CatBoostClassifier:
+        """Load random forest boost model"""
+        
+        with open(model_path, 'rb') as f:
+            model = pickle.load(f)
+        
+        return model
+        
     #-----------#
     # Utilities #
     #------------------------------------------------------------------------#

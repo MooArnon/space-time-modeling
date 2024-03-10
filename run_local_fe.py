@@ -17,7 +17,7 @@ if __name__ == "__main__":
     # Attribute #
     #------------------------------------------------------------------------#
     
-    df_path = os.path.join("tests", "BTC-Hourly.csv")
+    df_path = os.path.join("local", "BTC-Hourly.csv")
     df = pd.read_csv(df_path)
     
     control_column = "date"
@@ -58,7 +58,7 @@ if __name__ == "__main__":
 
     print(df.columns)
     
-    df.to_csv("preprocessed.csv")
+    df.to_csv("local/preprocessed.csv")
 
     """
     pickle_file_path = os.path.join(
