@@ -1,99 +1,15 @@
 from typing import Union
 
-import pandas as pd
-import numpy as np
 import torch
 import torch.nn as nn
 
-##############
-# Base class #
+from .__base import BaseDeep, BaseWrapper
+
+##########
+# Models #
 ##############################################################################
-
-class BaseDeep(nn.Module):
-    def tensorize_data(self, x: Union[np.ndarray, list]) -> torch.tensor:
-        """Tensorize data
-
-        Parameters
-        ----------
-        x : Union[np.ndarray, list]
-            Feature
-
-        Returns
-        -------
-        torch.tensor
-            Tensor data type
-        """
-        # Check a convert x to the tensor
-        if isinstance(x, np.ndarray):
-            x = self.tensorize_array(x)
-        elif isinstance(x, list):
-            x = self.tensorize_list(x)
-        return x
-    
-    ########
-    # Util #
-    ##########################################################################
-    
-    @staticmethod
-    def tensorize_array(array: np.array) -> torch.tensor:
-        """Create tensor object
-
-        Parameters
-        ----------
-        array : np.array
-            Input
-
-        Returns
-        -------
-        torch.tensor
-            Tensored data
-        """
-        return torch.tensor(array)
-    
-    ##########################################################################
-    
-    @staticmethod
-    def tensorize_list(list_object: list) -> torch.tensor:
-        """Create tensor object
-
-        Parameters
-        ----------
-        array : list
-            Input
-
-        Returns
-        -------
-        torch.tensor
-            Tensored data
-        """
-        return torch.tensor(list_object)
-    
-    ##########################################################################
-    
-    @staticmethod
-    def detensor(tensor_object: torch.tensor) -> list:
-        """Convert tensor to list 
-
-        Parameters
-        ----------
-        tensor_object : torch.tensor
-            Tensor object
-
-        Returns
-        -------
-        list
-            List of object extracted from tensor
-        """
-        out_numpy = tensor_object.detach().numpy()
-        return out_numpy.tolist()
-    
-    ##########################################################################
-    
-##############################################################################
-
-#######################
 # Deep Neuron Network #
-##############################################################################
+#######################
 
 class DNN(BaseDeep):
     def __init__(
@@ -156,13 +72,11 @@ class DNN(BaseDeep):
         out = self.sigmoid(out)
         
         return out
-    ##########################################################################
-    
-##############################################################################   
+    ##########################################################################   
 
-##########################
-# Long Short-Term Memory #
 ##############################################################################
+# Long Short-Term Memory #
+##########################
 
 class LSTM(BaseDeep):
     def __init__(
@@ -223,15 +137,18 @@ class LSTM(BaseDeep):
 
     ##########################################################################
 
-###########
-# Wrapper #
+############
+# Wrappers #
 ##############################################################################
+# Deep Neuron Network #
+#######################
 
-class BaseWrapper(nn.Module):
-    def __init__(self, model: nn.Module = None):
-        super(BaseWrapper, self).__init__()
+class DNNWrapper(BaseWrapper):
+    name = "dnn_wrapper"
+    def __init__(self, model: nn.Module=None, feature: list[str] = None):
+        super(DNNWrapper, self).__init__(feature)
         if model:
-            self.model = self.set_model(model)
+            self.set_model(model)
     
     ##############
     # Properties #
@@ -240,54 +157,62 @@ class BaseWrapper(nn.Module):
     #########
     
     def set_model(self, **kwargs) -> None:
-        self.__model = DNN(
-            **kwargs
-        )
+        self.__model = DNN(**kwargs)
     
     ##########################################################################
     
     @property
     def model(self) -> nn.Module:
         return self.__model
+
+    ###########
+    # Methods #
+    ##########################################################################
+    
+    def forward(self, x, detensor: bool = False):
+        if detensor:
+            return self.detensor(self.model(x))
+        else:
+            return self.model(x)
     
     ##########################################################################
-    # Feature #
-    ###########
     
-    def set_feature(self, feature: list[str]) -> None:
-        self.__feature = feature
+##############################################################################
+# Long Short-Term Memory #
+##########################
+
+class LSTMWrapper(BaseWrapper):
+    name = "lstm_wrapper"
+    def __init__(self, model: nn.Module=None, feature: list[str] = None):
+        super(LSTMWrapper, self).__init__(feature)
+        if model:
+            self.set_model(model)
+
+    ##############
+    # Properties #
+    ##########################################################################
+    # Model #
+    #########
+    
+    def set_model(self, **kwargs) -> None:
+        self.__model = LSTM(**kwargs)
     
     ##########################################################################
     
     @property
-    def feature(self) -> list[str]:
-        return self.__feature
-    
+    def model(self) -> nn.Module:
+        return self.__model
+
     ###########
-    # Forward #
+    # Methods #
     ##########################################################################
     
-    def forward(self, x):
-        return self.model(x)
+    def forward(self, x, detensor: bool = False):
+        if detensor:
+            return self.detensor(self.model(x))
+        else:
+            return self.model(x)
     
-    ##########################################################################
-    
-##############################################################################
-
-class DNNWrapper(BaseWrapper):
-    name = "dnn_wrapper"
-    def __init__(self, model: nn.Module=None):
-        super(DNNWrapper, self).__init__(model)
-
-    ##########################################################################
-    
-##############################################################################
-
-class LSTMWrapper(BaseWrapper):
-    name = "lstm_wrapper"
-    def __init__(self, model: nn.Module=None):
-        super(LSTMWrapper, self).__init__(model)
-
     ##########################################################################
 
 ##############################################################################

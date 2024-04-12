@@ -70,9 +70,6 @@ class DeepClassificationModel(BaseModel):
         
         
         self.set_focus_metric(focus_metric)
-        
-        if not os.path.exists(self.result_path):
-            os.mkdir(self.result_path)
     
     ##############
     # Properties #
@@ -303,7 +300,6 @@ class DeepClassificationModel(BaseModel):
             # Save model
             ## Create path
             model_path = os.path.join(self.result_path, model_name)
-            os.mkdir(model_path)
             self.model_path = model_path
             
             # Sev attribute
@@ -333,10 +329,10 @@ class DeepClassificationModel(BaseModel):
         dataloader_test: DataLoader
             Dataloader object for testing set
         """
-        print("Tuning Deep Neuron Network")
+        print("\nTuning Deep Neuron Network")
         print("--------------------------\n")
         
-        wrapper = DNNWrapper()
+        wrapper = DNNWrapper(feature=self.feature_column)
         
         # Get random search
         best_model = self.random_search(
@@ -370,10 +366,10 @@ class DeepClassificationModel(BaseModel):
         dataloader_test: DataLoader
             Dataloader object for testing set
         """
-        print("Tuning Long Short-Term Model")
+        print("\nTuning Long Short-Term Model")
         print("----------------------------\n")
         
-        wrapper = LSTMWrapper()
+        wrapper = LSTMWrapper(feature=self.feature_column)
         
         # Get random search
         best_model = self.random_search(
@@ -631,7 +627,7 @@ class DeepClassificationModel(BaseModel):
         model_type: str
             Type of model
         """
-        path = os.path.join(self.model_path, f'{model_type}.pth')
+        path = os.path.join(self.model_path)
         serialize_instance(
             instance = model_wrapper, 
             path = path, 
