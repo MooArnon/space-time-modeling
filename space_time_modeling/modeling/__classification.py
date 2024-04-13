@@ -18,7 +18,8 @@ from sklearn.neighbors import KNeighborsClassifier
 from scipy.stats import uniform, randint
 import xgboost as xgb
 
-from .__base import BaseModel
+from .__base import BaseModel, BaseWrapper
+from ..utilities.utilities import serialize_instance
 
 ###########
 # Classes #
@@ -59,10 +60,7 @@ class ClassificationModel(BaseModel):
         self.set_random_forest_params_dict(random_forest_params_dict)
         self.set_logistic_regression_params_dict(logistic_regression_params_dict)
         self.set_knn_params_dict(knn_params_dict)
-        
-        if not os.path.exists(self.result_path):
-            os.mkdir(self.result_path)
-        
+
     ##############
     # Properties #
     ##########################################################################
@@ -335,11 +333,34 @@ class ClassificationModel(BaseModel):
                 continue
             
             # Execute training function
-            train_function(
+            tuned_model, df_classification_report = train_function(
                 x_train, 
                 x_test,
                 y_train,
                 y_test,
+            )
+            
+            # Wrap model
+            wrapped_model = ClassifierWrapper(
+                model = tuned_model, 
+                name = model_name,
+                feature = self.feature_column,
+            )
+            
+            # Save model
+            path = os.path.join(self.result_path, model_name)
+            serialize_instance(
+                instance = wrapped_model,
+                path = path,
+                add_time = False,
+            )
+            
+            # Save metrics
+            df_classification_report.to_csv(
+                os.path.join(
+                    path,
+                    "metrics.csv"
+                )
             )
         
     ##########################################################################
@@ -364,7 +385,7 @@ class ClassificationModel(BaseModel):
         model = xgb.XGBClassifier(objective='binary:logistic',random_state=42)
         
         # Get random search
-        tuned_model = self.random_search(
+        tuned_model, df_classification_report = self.random_search(
             model,
             self.xgboost_params_dict,
             x_train,
@@ -373,46 +394,8 @@ class ClassificationModel(BaseModel):
             y_test,
         )
         
-        # Save model
-        self.save_xgboost(tuned_model)
-        
-        return tuned_model
-    ##########################################################################
-    
-    def save_xgboost(self, model: xgb.XGBClassifier) -> None:
-        """Save XGBoost model
+        return tuned_model, df_classification_report
 
-        Parameters
-        ----------
-        model : xgb.XGBClassifier
-            model
-        """
-        path = os.path.join(self.result_path, 'xgboost.xgb')
-        
-        model.save_model(path)
-        
-    ##########################################################################
-    
-    @staticmethod
-    def load_xgboost(model_path: str) -> xgb.XGBModel:
-        """Load xgboost model
-
-        Parameters
-        ----------
-        model_path : str
-            path of `.xbg` model
-
-        Returns
-        -------
-        xgb.XGBModel
-            xgboost model
-        """
-        # Initiate xbg instance
-        model = xgb.Booster()
-        model.load_model(model_path)
-        
-        return model
-    
     ##########################################################################
     # Cat Boost #
     #############
@@ -458,7 +441,7 @@ class ClassificationModel(BaseModel):
         )
         
         # Get random search
-        tuned_model = self.random_search(
+        tuned_model, df_classification_report  = self.random_search(
             model,
             self.catboost_params_dict,
             x_train,
@@ -466,25 +449,9 @@ class ClassificationModel(BaseModel):
             y_train,
             y_test,
         )
+
+        return tuned_model, df_classification_report
         
-        self.save_catboost(tuned_model)
-        
-    ##########################################################################
-    
-    def save_catboost(self, model: CatBoostClassifier) -> None:
-        path = os.path.join(self.result_path, 'catboost.bin')
-        model.save_model(path)
-    
-    ##########################################################################
-    
-    @staticmethod
-    def load_catboost(model_path: str) -> CatBoostClassifier:
-        """Load cat boost model"""
-        model = CatBoostClassifier()
-        model.load_model(model_path)
-        
-        return model
-    
     ##########################################################################
     # SVC #
     #######
@@ -518,7 +485,7 @@ class ClassificationModel(BaseModel):
         model = SVC(verbose=True)
         
         # Get random search
-        tuned_model = self.random_search(
+        tuned_model, df_classification_report = self.random_search(
             model,
             self.svc_params_dict,
             x_train,
@@ -526,29 +493,9 @@ class ClassificationModel(BaseModel):
             y_train,
             y_test,
         )
-        self.save_svc(tuned_model)
         
-    ##########################################################################
-    
-    def save_svc(self, model: CatBoostClassifier) -> None:
-        # Save the model
-        path = os.path.join(self.result_path, 'svc.pkl')
-        with open(f'{path}', 'wb') as f:
-            pickle.dump(model, f)
-        
-        model.save_model(path)
-    
-    ##########################################################################
-    
-    @staticmethod
-    def load_svc(model_path: str) -> CatBoostClassifier:
-        """Load cat boost model"""
-        
-        with open(model_path, 'rb') as f:
-            model = pickle.load(f)
-        
-        return model
-    
+        return tuned_model, df_classification_report
+
     ##########################################################################
     # Random forest #
     #################
@@ -582,7 +529,7 @@ class ClassificationModel(BaseModel):
         model = RandomForestClassifier()
         
         # Get random search
-        tuned_model = self.random_search(
+        tuned_model, df_classification_report = self.random_search(
             model,
             self.random_forest_params_dict,
             x_train,
@@ -590,27 +537,9 @@ class ClassificationModel(BaseModel):
             y_train,
             y_test,
         )
-        self.save_random_forest(tuned_model)
         
-    ##########################################################################
-    
-    def save_random_forest(self, model: CatBoostClassifier) -> None:
-        # Save the model
-        path = os.path.join(self.result_path, 'random_forest.pkl')
-        with open(f'{path}', 'wb') as f:
-            pickle.dump(model, f)
-    
-    ##########################################################################
-    
-    @staticmethod
-    def load_random_forest(model_path: str) -> CatBoostClassifier:
-        """Load random forest boost model"""
-        
-        with open(model_path, 'rb') as f:
-            model = pickle.load(f)
-        
-        return model
-    
+        return tuned_model, df_classification_report
+
     ##########################################################################
     # Logistic regression #
     #######################
@@ -644,7 +573,7 @@ class ClassificationModel(BaseModel):
         model = LogisticRegression(solver='saga', max_iter=10000)
         
         # Get random search
-        tuned_model = self.random_search(
+        tuned_model, df_classification_report = self.random_search(
             model,
             self.logistic_regression_params_dict,
             x_train,
@@ -652,26 +581,7 @@ class ClassificationModel(BaseModel):
             y_train,
             y_test,
         )
-        self.save_logistic_regression(tuned_model)
-        
-    ##########################################################################
-    
-    def save_logistic_regression(self, model: CatBoostClassifier) -> None:
-        # Save the model
-        path = os.path.join(self.result_path, 'logistic_regression.pkl')
-        with open(f'{path}', 'wb') as f:
-            pickle.dump(model, f)
-    
-    ##########################################################################
-    
-    @staticmethod
-    def load_logistic_regression(model_path: str) -> CatBoostClassifier:
-        """Load random forest boost model"""
-        
-        with open(model_path, 'rb') as f:
-            model = pickle.load(f)
-        
-        return model
+        return tuned_model, df_classification_report
     
     ##########################################################################
     # Logistic regression #
@@ -706,7 +616,7 @@ class ClassificationModel(BaseModel):
         model = KNeighborsClassifier()
         
         # Get random search
-        tuned_model = self.random_search(
+        tuned_model, df_classification_report = self.random_search(
             model,
             self.knn_params_dict,
             x_train,
@@ -714,27 +624,9 @@ class ClassificationModel(BaseModel):
             y_train,
             y_test,
         )
-        self.save_knn(tuned_model)
         
-    ##########################################################################
-    
-    def save_knn(self, model: CatBoostClassifier) -> None:
-        # Save the model
-        path = os.path.join(self.result_path, 'knn.pkl')
-        with open(f'{path}', 'wb') as f:
-            pickle.dump(model, f)
-    
-    ##########################################################################
-    
-    @staticmethod
-    def load_knn(model_path: str) -> CatBoostClassifier:
-        """Load random forest boost model"""
-        
-        with open(model_path, 'rb') as f:
-            model = pickle.load(f)
-        
-        return model
-        
+        return tuned_model, df_classification_report
+
     #############
     # Utilities #
     ##########################################################################
@@ -796,15 +688,93 @@ class ClassificationModel(BaseModel):
         
         # Convert the classification report to a DataFrame
         df_classification_report = pd.DataFrame(report).transpose()
-
-        # Save the classification report DataFrame to a CSV file
-        df_classification_report.to_csv(
-            os.path.join(self.result_path, f'{type(model)}.csv'), 
-            index=True,
-        )
         
-        return best_model
+        return best_model, df_classification_report
     
+    ##########################################################################
+
+###########
+# Wrapper #
+##############################################################################
+
+class ClassifierWrapper(BaseWrapper):
+    """Wrapper for classification
+
+    Load model into wrapper with an useful method and properties.
+    This class was implemented to serve the feature store feature.
+    
+    Initiate
+    --------
+    ```python
+    from space_time_modeling.utilities import load_instance
+    model_wrapper: ClassifierWrapper = load_instance(path)
+    ```
+    
+    Call
+    ----
+    Call function activates at instance call. Will call predict.  
+    Example, `pred = model_wrapper(data_list)`
+    x: list
+        List of data
+    clean: bool = True
+        If true, clean a data
+    
+    Notes
+    -----
+    The feeding data would different by the type of model.
+    `catboost`: receive `list[float]`
+    others model: receive `list[list[float]]`
+    """
+    def __init__(self, model: object, name: str, feature: list[str] = None):
+        super(ClassifierWrapper, self).__init__(feature)
+        self.set_model(model)
+        self.set_name(name)
+
+    ##############
+    # Properties #
+    ##########################################################################
+    # Model #
+    #########
+    
+    def set_model(self, model: object) -> None:
+        self.__model = model
+    
+    ##########################################################################
+    
+    @property
+    def model(self) -> object:
+        return self.__model
+
+    ##########################################################################
+    
+    def set_name(self, name: str) -> None:
+        self.__name = name 
+    
+    ##########################################################################
+    
+    @property
+    def name(self) -> None:
+        return self.__name
+    
+    ###########
+    # Methods #
+    ##########################################################################
+    
+    def __call__(self, x: list, clean: bool = True): 
+        pred = self.model.predict(x)
+        if clean:
+            pred = self.extract_value(pred)
+            pred = int(pred)
+        return pred
+    
+    ##########################################################################
+    
+    @staticmethod
+    def extract_value(nested_list: list):
+        while isinstance(nested_list, list):
+            nested_list = nested_list[0]
+        return nested_list
+
     ##########################################################################
 
 ##############################################################################
