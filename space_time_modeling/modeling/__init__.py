@@ -2,12 +2,10 @@
 # Import #
 ##############################################################################
 
-from typing import Union
-
 from pandas.core.api import DataFrame as DataFrame
 
 from .__base import BaseModel
-from .__classification import ClassificationModel
+from .__classification import ClassificationModel, ClassifierWrapper
 from .__deep_classification import DeepClassificationModel
 
 ############

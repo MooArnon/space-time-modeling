@@ -5,10 +5,12 @@
 import pickle
 import os
 
+import numpy as np
 import pandas as pd
 
 from space_time_modeling.modeling import modeling_engine
-from space_time_modeling.modeling import ClassificationModel
+from space_time_modeling.modeling import ClassificationModel, ClassifierWrapper 
+from space_time_modeling.utilities import load_instance
 
 #######
 # Use #
@@ -21,7 +23,7 @@ if __name__ == "__main__":
     
     pickle_preprocess_path = os.path.join(
         "fe_15lag_3-9-12-15-30rolling_percent-change_3-9-12-15-30rsi",
-        "fe_15lag_3-9-12-15-30rolling_percent-change_3-9-12-15-30rsi_20240412_121420.pkl"
+        "fe_15lag_3-9-12-15-30rolling_percent-change_3-9-12-15-30rsi_20240412_191021.pkl"
     )
     
     df_path = os.path.join("local", "BTC-Hourly.csv")
@@ -59,34 +61,47 @@ if __name__ == "__main__":
     #############
     # Get model #
     ##########################################################################
-    
+    """
     modeling: ClassificationModel = modeling_engine(
         engine = "classification",
         label_column = label_column,
         feature_column = feature_column,
-        result_path = os.path.join("test_dnn"),
+        result_path = os.path.join("classifier"),
         n_iter = 1,
     )
     
-    modeling.modeling(
-        df = df,
-    )
-    
+    modeling.modeling(df = df)
+    """
     ##############
     # Test model #
     ##########################################################################
     
-    """
-    model = ClassificationModel()
-    model = model.load_catboost("test_catboost_20240224_225157/catboost_best_model.bin")
-
-    # Generate a list of 10 random float numbers
-    random_floats = [random.random() for _ in range(len(feature_column))]
+    model_types = [
+        "catboost", 
+        "knn", 
+        "logistic_regression", 
+        "random_forest", 
+        "xgboost"
+    ]
+    for model_type in model_types:
+        path = os.path.join(
+            "classifier_20240413_160045",
+            model_type,
+            f"{model_type}.pkl"
+        )
+        
+        model_wrapper: ClassifierWrapper = load_instance(path)
+        last_row = df[model_wrapper.feature].iloc[-1].to_list()
+        try:
+            if model_type == 'catboost':
+                pred = model_wrapper(last_row)
+            else: 
+                pred = model_wrapper([last_row])
+        except ValueError:
+            raise ValueError(f"Error at {model_type}")
+        
+        print(pred)
     
-    pred = model.predict_proba(random_floats)
-    
-    print(model.classes_)
-    """
     ##########################################################################
     
 ##############################################################################

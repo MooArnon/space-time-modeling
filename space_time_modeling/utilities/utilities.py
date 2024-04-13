@@ -109,10 +109,13 @@ def serialize_instance(
         Target exporting instance
     path : str
         Path to export
+    add_time: bool = True    
+        If true, add timestamp as suffix
     """
     time_stamp_format = now_formatted_timestamp()
     
-    os.makedirs(path)
+    if not os.path.exists(path):
+        os.makedirs(path)
     if add_time:
         path = os.path.join(path, f"{instance.name}_{time_stamp_format}.pkl")
     else:

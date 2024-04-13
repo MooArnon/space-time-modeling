@@ -6,11 +6,12 @@ import pickle
 import os
 
 import pandas as pd
+import numpy as np
 import torch.nn as nn
 
 from space_time_modeling.modeling import modeling_engine
 from space_time_modeling.modeling import DeepClassificationModel
-from space_time_modeling.utilities import load_model_dnn
+from space_time_modeling.utilities import load_instance
 
 #######
 # Use #
@@ -23,14 +24,13 @@ if __name__ == "__main__":
     
     pickle_preprocess_path = os.path.join(
         "fe_15lag_3-9-12-15-30rolling_percent-change_3-9-12-15-30rsi",
-        "fe_15lag_3-9-12-15-30rolling_percent-change_3-9-12-15-30rsi_20240412_121420.pkl"
+        "fe_15lag_3-9-12-15-30rolling_percent-change_3-9-12-15-30rsi_20240412_191021.pkl"
     )
     
     df_path = os.path.join("local", "BTC-Hourly.csv")
     
     label_column = "signal"
-    feature_column = [ "signal",
-        'lag_1_day', 'lag_2_day',
+    feature_column = ['lag_1_day', 'lag_2_day',
         'lag_3_day',  'lag_4_day', 'lag_5_day', 'lag_6_day', 'lag_7_day',
         'lag_8_day',  'lag_9_day', 'lag_10_day', 'lag_11_day', 'lag_12_day',
         'lag_13_day', 'lag_14_day', 'lag_15_day', 'mean_3_day', 'std_3_day',
@@ -65,12 +65,25 @@ if __name__ == "__main__":
         engine = "deep_classification",
         label_column = label_column,
         feature_column = feature_column,
-        result_path = os.path.join("test_dnn"),
+        result_path = os.path.join("nn"),
         mode ='random_search',
         n_iter = 2,
         lstm_params_dict = {
             'lr': [0.00001, 0.0001, 0.001, 0.01, 0.1],
-            'epochs':[15, 20],
+            'epochs':[3, 4],
+            'criterion':[nn.BCELoss(), nn.HuberLoss()],
+            'module__hidden_layers': [
+                [8, 16, 8],
+                [16, 32, 16],
+                [8, 16, 16, 8],
+                [16, 32, 32, 16],
+                [8, 16, 32, 16, 8],
+            ],
+            'module__dropout': [0.1, 0.15, 0.2, 0.25]
+        },
+        dnn_params_dict = {
+            'lr': [0.00001, 0.0001, 0.001, 0.01, 0.1],
+            'epochs':[3, 4],
             'criterion':[nn.BCELoss(), nn.HuberLoss()],
             'module__hidden_layers': [
                 [8, 16, 8],
@@ -91,14 +104,15 @@ if __name__ == "__main__":
     
     ##########################################################################
     """
-    model = load_model_dnn("test_dnn_20240408_233107/lstm/lstm.pth")
-    print(model)
+    model_wrapper = load_instance("nn_20240412_202842/lstm/lstm_wrapper.pkl")
+    print(model_wrapper)
+    print(model_wrapper.feature)
     print(df.head(5))
-    last_row = df.iloc[-1].to_list()
-    print(last_row)
-    pred = model(last_row)
+    last_row = df[model_wrapper.feature].iloc[-1].to_list()
+    pred = model_wrapper(last_row, detensor=True)
     print(pred)
     """
+    
     ##########################################################################
 
 ##############################################################################
