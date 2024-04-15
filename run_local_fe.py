@@ -4,9 +4,8 @@
 
 import os
 import pandas as pd
-import pickle
 
-from space_time_modeling.fe import fe_engine 
+from space_time_modeling.fe import ClassificationFE 
 
 #######
 # Use #
@@ -24,57 +23,38 @@ if __name__ == "__main__":
     target_column = "open"
     label = "signal"
     
+    df = df[[target_column, control_column]]
+    
     ###########
     # Get eda #
     ##########################################################################
 
     # Initiate engine
-    fe = fe_engine(
+    fe = ClassificationFE(
         control_column = control_column,
         target_column = target_column,
-        label = label,
-        engine = "classification",
-        fe_name_list=[
-            "lag_df",
-            "rolling_df",
-            "percent_change_df",
-            "rsi_df",
-            "date_hour_df",
-        ],
     )
     
-    # label data
-    df = fe.add_label(
-        df = df, 
-        target_column = "open",
+    df_label = fe.add_label(
+        df,
+        target_column
     )
+    print(df_label.head(4))
     
-    # Get transform
-    df = fe.transform_df(
-        df = df,
-        serialized = True
-    )
+    df_ma = fe.ma(df, [3, 7, 25, 99])
+    print(df_ma.head(4))
     
-
-    print(df.columns)
+    df_ema = fe.ema(df, [3, 7, 25, 99])
+    print(df_ema.head(4))
     
-    df.to_csv("local/preprocessed.csv")
-
-    """
-    pickle_file_path = os.path.join(
-        "fe_15lag_3-9-12-15-30rolling_percent-change_3-9-12-15-30rsi",
-        "fe_15lag_3-9-12-15-30rolling_percent-change_3-9-12-15-30rsi_20240212_195034.pkl"
-    )
-    with open(pickle_file_path, 'rb') as f:
-        # Load the object stored in the pickle file
-        preprocessor = pickle.load(f)
+    df_date = fe.date_hour_df(df)
+    print(df_date.head(4))
     
-    df = preprocessor.transform_df(
-        df
-    )
+    df_date = fe.percent_change_df(df, [1, 2, 3, 4, 5, 10])
+    print(df_date.head(4))
     
-    df.to_csv("preprocessed.csv")
-    """
+    df_date = fe.rsi_df(df, [3, 7, 25, 99])
+    print(df_date.head(10))
     
     ##########################################################################
 
