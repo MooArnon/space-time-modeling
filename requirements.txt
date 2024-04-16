@@ -8,3 +8,4 @@ catboost~=1.2.3
 scipy~=1.11.4
 xgboost~=2.0.3
 importlib-metadata==7.0.0
+torch~=2.2
