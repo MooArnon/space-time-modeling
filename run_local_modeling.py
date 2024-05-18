@@ -4,64 +4,43 @@
 
 import pickle
 import os
+import json
 
 import numpy as np
 import pandas as pd
+import requests
 
 from space_time_modeling.modeling import modeling_engine
 from space_time_modeling.modeling import ClassificationModel, ClassifierWrapper 
 from space_time_modeling.utilities import load_instance
 
-#######
-# Use #
+#########
+# Train #
 ##############################################################################
-if __name__ == "__main__":
-    
-    #############
-    # Attribute #
-    ##########################################################################
-    
-    pickle_preprocess_path = os.path.join(
-        "fe_15lag_3-9-12-15-30rolling_percent-change_3-9-12-15-30rsi",
-        "fe_15lag_3-9-12-15-30rolling_percent-change_3-9-12-15-30rsi_20240412_191021.pkl"
-    )
-    
-    df_path = os.path.join("local", "BTC-Hourly.csv")
-    
+
+def train_model() -> None:
+    # statics 
     label_column = "signal"
-    feature_column = [ "signal",
-        'lag_1_day', 'lag_2_day',
-        'lag_3_day',  'lag_4_day', 'lag_5_day', 'lag_6_day', 'lag_7_day',
-        'lag_8_day',  'lag_9_day', 'lag_10_day', 'lag_11_day', 'lag_12_day',
-        'lag_13_day', 'lag_14_day', 'lag_15_day', 'mean_3_day', 'std_3_day',
-        'mean_9_day', 'std_9_day', 'mean_12_day', 'std_12_day', 'mean_15_day',
-        'std_15_day', 'mean_30_day', 'std_30_day', 'percentage_change', 'rsi_3',
-        'rsi_9',      'rsi_12', 'rsi_15', 'rsi_30'
-    ]
-    label = "signal"
+    id_columns = "id"
     
-    ###################
-    # Preprocess data #
-    ##########################################################################
+    data = {
+            "feature_service": "complete_feature_label",
+            "entities": "select id, current_timestamp as event_timestamp from feature_store.ma where asset = 'BTCUSDT'"
+        }
     
-    df = pd.read_csv(df_path)
+    # Request data
+    data = requests.get(
+        url = "http://0.0.0.0:6000/feature/offline_feature/fetch",
+        data = json.dumps(data)
+    ).json()
     
-    with open(pickle_preprocess_path, 'rb') as f:
-        
-        # Load the object stored in the pickle file
-        preprocessor = pickle.load(f)
-        
-    df = preprocessor.add_label(
-        df = df, 
-        target_column = "open",
-    )
-    
-    df = preprocessor.transform_df(df)
-    
-    #############
-    # Get model #
-    ##########################################################################
-    
+    # Preprocess data
+    df = pd.DataFrame(data=data).drop(columns=["event_timestamp", id_columns])
+    df.dropna(inplace=True)
+    feature_column = list(df.columns)
+    feature_column.remove(label_column)
+    # return df.columns
+    # Train model
     modeling: ClassificationModel = modeling_engine(
         engine = "classification",
         label_column = label_column,
@@ -71,37 +50,51 @@ if __name__ == "__main__":
     )
     
     modeling.modeling(df = df)
-    """
-    ##############
-    # Test model #
-    ##########################################################################
     
-    model_types = [
-        "catboost", 
-        "knn", 
-        "logistic_regression", 
-        "random_forest", 
-        "xgboost"
-    ]
-    for model_type in model_types:
-        path = os.path.join(
-            "classifier_20240413_160045",
-            model_type,
-            f"{model_type}.pkl"
-        )
-        
-        model_wrapper: ClassifierWrapper = load_instance(path)
-        last_row = df[model_wrapper.feature].iloc[-1].to_list()
-        try:
-            if model_type == 'catboost':
-                pred = model_wrapper(last_row)
-            else: 
-                pred = model_wrapper([last_row])
-        except ValueError:
-            raise ValueError(f"Error at {model_type}")
-        
-        print(pred)
+########
+# Test #
+##############################################################################
+
+def test_model() -> None:
+    
+    # Data
+    data = {
+        "feature_service": "complete_feature",
+        "entity_rows": [
+            {
+                "id": 6797
+            }
+        ]
+    }
+
+    data = requests.get(
+        url = "http://0.0.0.0:6000/feature/online_feature/fetch",
+        data = json.dumps(data)
+    ).json()
+    
+    
+    # Load model
+    model: ClassifierWrapper = load_instance(
+        "classifier_20240518_082212/catboost/catboost.pkl"
+    )
+    
+    data_df = pd.DataFrame(data=data).drop(columns=["id"])[list(model.feature)]
+    
+    pred = model(data_df)
+    
+    print(pred)
+
+
+#######
+# Use #
+##############################################################################
+
+if __name__ == "__main__":
+    
+    # train_model()
+    test_model()
+    
     
     ##########################################################################
-    """
+
 ##############################################################################

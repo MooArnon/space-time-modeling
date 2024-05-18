@@ -760,7 +760,7 @@ class ClassifierWrapper(BaseWrapper):
     # Methods #
     ##########################################################################
     
-    def __call__(self, x: list, clean: bool = True): 
+    def __call__(self, x: Union[list, pd.DataFrame], clean: bool = True): 
         pred = self.model.predict(x)
         if clean:
             pred = self.extract_value(pred)
