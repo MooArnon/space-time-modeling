@@ -28,7 +28,6 @@ class BaseModel:
             feature_column: list[str] = None,
             result_path: str = None,
             test_size: float = 0.2,
-            preprocessor: BaseFE = None
     ) -> None:
         """Initiate BaseModel
 
@@ -44,8 +43,6 @@ class BaseModel:
             String of feature column
         test_size : float = 0.2
             Proportion of test
-        preprocessor: object = None
-            Preprocessor object
         """
         # Set main attribute
         self.set_label_column(label_column)
