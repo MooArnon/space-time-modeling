@@ -29,8 +29,6 @@ from ..utilities.utilities import serialize_instance
 # Statics #
 ##############################################################################
 
-terminal_width = os.get_terminal_size().columns
-
 ###########
 # Classes #
 ##############################################################################
@@ -264,7 +262,6 @@ class DeepClassificationModel(BaseModel):
         # Iterate over model_name_list
         for model_name in model_name_list:
             print("\n")
-            print("#"*terminal_width)
             
             # Get train function for each model, using name
             train_function = getattr(self, model_name)
@@ -458,8 +455,6 @@ class DeepClassificationModel(BaseModel):
             
             model_accuracy_list.append(model_accuracy)
             
-            print("="*terminal_width)
-        
         # Choose best model
         best_model = self.choose_best_model(focus_metric, model_accuracy_list)
         return best_model
@@ -527,8 +522,7 @@ class DeepClassificationModel(BaseModel):
                 print(f'{epoch}/{epochs}')
                 print(f'Loss: {running_loss}')
                 print(f'Accuracy test set: {metrics["accuracy"]}')
-                print("-"*terminal_width)
-        
+
         # Test model
         metrics = self.test_deep(model, dataloader_test)
         
