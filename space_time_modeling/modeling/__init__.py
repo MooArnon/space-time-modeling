@@ -5,8 +5,18 @@
 from pandas.core.api import DataFrame as DataFrame
 
 from .__base import BaseModel
-from .__classification import ClassificationModel, ClassifierWrapper
-from .__deep_classification import DeepClassificationModel
+
+# Handel the import error from seperate 2 reqs.
+try:
+    from .__classification import ClassificationModel
+except ImportError:
+    ClassificationModel = None
+
+try:
+    from .__deep_classification import DeepClassificationModel
+except ImportError:
+    DeepClassificationModel = None
+
 
 ############
 # Function #
@@ -110,3 +120,6 @@ def modeling_engine(
     return modeling
 
 ##############################################################################
+
+if __name__ == "main":
+    pass

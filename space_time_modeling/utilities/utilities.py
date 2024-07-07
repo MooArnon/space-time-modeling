@@ -6,8 +6,6 @@ import os
 
 import pandas as pd
 import pickle
-import torch
-from torch import nn
 
 import datetime
 
@@ -142,16 +140,4 @@ def load_instance(path: str) -> object:
     with open(path, "rb") as f:
         return pickle.load(f)
     
-##############################################################################
-
-def load_model_dnn(model_path: str) -> nn.Module:
-        """Load Deep learning model
-        
-        Parameters
-        ----------
-        model_path: str
-            path of model
-        """
-        return torch.load(f'{model_path}')
-
 ##############################################################################
