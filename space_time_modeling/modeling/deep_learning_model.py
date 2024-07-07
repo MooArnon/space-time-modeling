@@ -7,7 +7,7 @@ from typing import Union
 import torch
 import torch.nn as nn
 
-from .__base import BaseDeep, BaseWrapper
+from .__base_deep import BaseDeep, BaseWrapper
 
 ##########
 # Models #
@@ -140,6 +140,8 @@ class LSTM(BaseDeep):
         return out
 
     ##########################################################################
+
+##############################################################################
 
 ############
 # Wrappers #

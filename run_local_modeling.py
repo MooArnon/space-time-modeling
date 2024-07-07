@@ -11,7 +11,7 @@ import pandas as pd
 import requests
 
 from space_time_modeling.modeling import modeling_engine
-from space_time_modeling.modeling import ClassificationModel, ClassifierWrapper 
+from space_time_modeling.modeling import ClassificationModel 
 from space_time_modeling.utilities import load_instance
 
 #########
@@ -30,7 +30,7 @@ def train_model() -> None:
     
     # Request data
     data = requests.get(
-        url = "http://0.0.0.0:6000/feature/offline_feature/fetch",
+        url = "http://5.245.15820:6000/feature/offline_feature/fetch",
         data = json.dumps(data)
     ).json()
     
@@ -46,10 +46,11 @@ def train_model() -> None:
         label_column = label_column,
         feature_column = feature_column,
         result_path = os.path.join("classifier"),
-        n_iter = 1,
+        test_size = 0.15,
+        n_iter = 10,
     )
     
-    modeling.modeling(df = df)
+    modeling.modeling(df = df, model_name_list=["logistic_regression", "random_forest"])
     
 ########
 # Test #
@@ -62,20 +63,20 @@ def test_model() -> None:
         "feature_service": "complete_feature",
         "entity_rows": [
             {
-                "id": 6797
+                "id": 11004
             }
         ]
     }
 
     data = requests.get(
-        url = "http://0.0.0.0:6000/feature/online_feature/fetch",
+        url = "http://15.45.15.204:6000/feature/online_feature/fetch",
         data = json.dumps(data)
     ).json()
     
     
     # Load model
-    model: ClassifierWrapper = load_instance(
-        "classifier_20240518_082212/catboost/catboost.pkl"
+    model = load_instance(
+        "classifier_20240707_174758/logistic_regression/logistic_regression.pkl"
     )
     
     data_df = pd.DataFrame(data=data).drop(columns=["id"])[list(model.feature)]
@@ -91,8 +92,8 @@ def test_model() -> None:
 
 if __name__ == "__main__":
     
-    # train_model()
-    test_model()
+    train_model()
+    # test_model()
     
     
     ##########################################################################

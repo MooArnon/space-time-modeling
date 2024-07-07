@@ -27,7 +27,7 @@ packages: list[str] = find_packages(
     ]
 )
 
-requirements_path = os.path.join('requirements.txt')
+deep_learning_requirements = os.path.join('deep_learning_requirements.txt')
 
 ###############
 # Description #
@@ -49,6 +49,9 @@ with open("requirements.txt", "r") as file_obj:
     # splitting the file data into lines
     dependencies = file_data.splitlines()
     
+with open("deep_learning_requirements.txt", "r") as file_obj:
+    deep_learning_dependencies = file_obj.read().splitlines()
+
 #########
 # Setup #
 ##############################################################################
@@ -62,6 +65,10 @@ setup(
     install_requires=dependencies,
     include_package_data=True,
     long_description = long_description,
+    python_requires='>=3.9',
+    extras_require={
+        'deep': deep_learning_dependencies
+    },
 )
 
 ##############################################################################

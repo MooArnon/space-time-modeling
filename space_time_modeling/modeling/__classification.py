@@ -3,10 +3,9 @@
 ##############################################################################
 
 import os
-import pickle
 from typing import Union
 
-from catboost import CatBoostClassifier, Pool
+from catboost import CatBoostClassifier
 import pandas as pd
 from pandas.core.api import DataFrame, Series
 from sklearn.model_selection import RandomizedSearchCV
