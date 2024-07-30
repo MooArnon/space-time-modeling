@@ -16,11 +16,11 @@ if __name__ == "__main__":
     # Attribute #
     ##########################################################################
     
-    df_path = os.path.join("local", "BTC-Hourly.csv")
+    df_path = os.path.join("local", "btc-all.csv")
     df = pd.read_csv(df_path)
     
-    control_column = "date"
-    target_column = "open"
+    control_column = "scraped_timestamp"
+    target_column = "price"
     label = "signal"
     
     df = df[[target_column, control_column]]
@@ -59,6 +59,9 @@ if __name__ == "__main__":
     df_date = fe.lag_df(df, 5)
     print(df_date.tail(10))
     
+    df_date.to_csv(
+        os.path.join("local", "preprocessed-btc-all.csv")
+    )
     ##########################################################################
 
 ##############################################################################

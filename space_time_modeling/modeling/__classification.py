@@ -297,6 +297,7 @@ class ClassificationModel(BaseModel):
     def modeling(
             self,
             df : Union[DataFrame, str],
+            preprocessing_pipeline: object,
             model_name_list: list[str] = [
                 'xgboost', 
                 'catboost', 
@@ -344,7 +345,8 @@ class ClassificationModel(BaseModel):
             wrapped_model = ClassifierWrapper(
                 model = tuned_model, 
                 name = model_name,
-                feature = self.feature_column,
+                feature = list(x_train.columns),
+                preprocessing_pipeline=preprocessing_pipeline
             )
             
             # Save model
