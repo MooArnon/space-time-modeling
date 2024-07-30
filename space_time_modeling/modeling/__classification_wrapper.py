@@ -2,8 +2,10 @@
 # Import #
 ##############################################################################
 
+from datetime import datetime
 from typing import Union
 
+import numpy as np
 import pandas as pd
 
 from .__base import BaseWrapper
@@ -40,10 +42,17 @@ class ClassifierWrapper(BaseWrapper):
     `catboost`: receive `list[float]`
     others model: receive `list[list[float]]`
     """
-    def __init__(self, model: object, name: str, feature: list[str] = None):
-        super(ClassifierWrapper, self).__init__(feature)
+    def __init__(
+        self, 
+        model: object, 
+        name: str, 
+        feature: list[str] = None,
+        preprocessing_pipeline: object = None,
+    ) -> None:
+        super(ClassifierWrapper, self).__init__(feature, preprocessing_pipeline)
         self.set_model(model)
         self.set_name(name)
+        self.set_version()
 
     ##############
     # Properties #
@@ -68,14 +77,29 @@ class ClassifierWrapper(BaseWrapper):
     ##########################################################################
     
     @property
-    def name(self) -> None:
+    def name(self) -> str:
         return self.__name
+    
+    ##########################################################################
+    
+    def set_version(self, name: str = None) -> None:
+        now = datetime.now()
+        self.__version = f"{now.strftime('%Y%m%d.%H%M%S')}"
+        if name:
+            self.__version = f"{self.__version}.{name}"
+    
+    ##########################################################################
+    
+    @property
+    def version(self) -> str:
+        return self.__version
     
     ###########
     # Methods #
     ##########################################################################
     
     def __call__(self, x: Union[list, pd.DataFrame], clean: bool = True): 
+        x = self.preprocessing_pipeline.transform_df(x).iloc[[-1]]
         pred = self.model.predict(x)
         if clean:
             pred = self.extract_value(pred)
@@ -85,9 +109,11 @@ class ClassifierWrapper(BaseWrapper):
     ##########################################################################
     
     @staticmethod
-    def extract_value(nested_list: list):
+    def extract_value(nested_list: Union[list, np.ndarray]):
+        if isinstance(nested_list, np.ndarray):
+            nested_list = nested_list.tolist()
         while isinstance(nested_list, list):
-            nested_list = nested_list[0]
+            nested_list = nested_list[-1]
         return nested_list
 
     ##########################################################################

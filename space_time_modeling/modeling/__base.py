@@ -186,10 +186,10 @@ class BaseModel:
         """
         if self.label_column in self.feature_column:
             self.feature_column.remove(self.label_column)
-        
+            
         # Split
         label = df[self.label_column]
-        feature = df[self.feature_column]
+        feature = df.drop(columns=self.label_column)
         
         return label, feature
     
@@ -228,11 +228,17 @@ class BaseModel:
 ##############################################################################
 
 class BaseWrapper():
-    def __init__(self, feature: list[str] = None):
+    def __init__(
+        self, 
+        feature: list[str] = None, 
+        preprocessing_pipeline: object = None
+    ) -> None:
         super(BaseWrapper, self).__init__()
         
         if feature:
             self.set_feature(feature)
+        if preprocessing_pipeline:
+            self.set_preprocessing_pipeline(preprocessing_pipeline)
     
     ##############
     # Properties #
@@ -248,6 +254,17 @@ class BaseWrapper():
     @property
     def feature(self) -> list[str]:
         return self.__feature
+    
+    ##########################################################################
+    
+    def set_preprocessing_pipeline(self, preprocessing_pipeline: object) -> None:
+        self.__preprocessing_pipeline = preprocessing_pipeline
+    
+    ##########################################################################
+    
+    @property
+    def preprocessing_pipeline(self) -> list[str]:
+        return self.__preprocessing_pipeline
     
     ##########################################################################
     

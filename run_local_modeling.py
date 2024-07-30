@@ -2,16 +2,16 @@
 # Import #
 ##############################################################################
 
-import pickle
 import os
 import json
 
-import numpy as np
 import pandas as pd
 import requests
 
+from space_time_modeling.fe import ClassificationFE 
 from space_time_modeling.modeling import modeling_engine
 from space_time_modeling.modeling import ClassificationModel 
+from space_time_modeling.modeling.__classification_wrapper import ClassifierWrapper
 from space_time_modeling.utilities import load_instance
 
 #########
@@ -21,24 +21,43 @@ from space_time_modeling.utilities import load_instance
 def train_model() -> None:
     # statics 
     label_column = "signal"
-    id_columns = "id"
+    control_column = "scraped_timestamp"
+    target_column = "price"
     
-    data = {
-            "feature_service": "complete_feature_label",
-            "entities": "select id, current_timestamp as event_timestamp from feature_store.ma where asset = 'BTCUSDT'"
-        }
+    # Feature col 
+    feature_column = [
+        "percent_change_df",
+        "rsi_df",
+        "date_hour_df",
+        "ema",
+        "percent_diff_ema",
+    ]
     
-    # Request data
-    data = requests.get(
-        url = "http://5.245.15820:6000/feature/offline_feature/fetch",
-        data = json.dumps(data)
-    ).json()
+    df_path = os.path.join("local", "btc-all.csv")
     
     # Preprocess data
-    df = pd.DataFrame(data=data).drop(columns=["event_timestamp", id_columns])
+    df = pd.read_csv(df_path)
     df.dropna(inplace=True)
-    feature_column = list(df.columns)
-    feature_column.remove(label_column)
+    df = df[[target_column, control_column]]
+    
+    fe = ClassificationFE(
+        control_column = control_column,
+        target_column = target_column,
+        label = label_column,
+        fe_name_list = feature_column,
+        n_window = [7, 25, 99],
+        ununsed_feature = ['ema_7', 'ema_25', 'ema_99']
+    )
+    
+    df_label = fe.add_label(
+        df,
+        target_column
+    )
+    
+    df_train = fe.transform_df(
+        df_label
+    )
+    
     # return df.columns
     # Train model
     modeling: ClassificationModel = modeling_engine(
@@ -47,43 +66,45 @@ def train_model() -> None:
         feature_column = feature_column,
         result_path = os.path.join("classifier"),
         test_size = 0.15,
-        n_iter = 10,
+        n_iter = 50,
     )
     
-    modeling.modeling(df = df, model_name_list=["logistic_regression", "random_forest"])
+    print(df_train.columns)
+    print(df_train.shape)
+    
+    modeling.modeling(
+        df = df_train, 
+        preprocessing_pipeline=fe,
+        model_name_list=['xgboost', 'catboost', 'random_forest', 'logistic_regression', 'knn'],
+    )
     
 ########
 # Test #
 ##############################################################################
 
-def test_model() -> None:
-    
-    # Data
-    data = {
-        "feature_service": "complete_feature",
-        "entity_rows": [
-            {
-                "id": 11004
-            }
-        ]
-    }
-
-    data = requests.get(
-        url = "http://15.45.15.204:6000/feature/online_feature/fetch",
-        data = json.dumps(data)
-    ).json()
-    
-    
-    # Load model
-    model = load_instance(
-        "classifier_20240707_174758/logistic_regression/logistic_regression.pkl"
+def test_model(path: str, type: str) -> None:
+    model_path = os.path.join(
+        path,
+        type,
+        f"{type}.pkl",
     )
     
-    data_df = pd.DataFrame(data=data).drop(columns=["id"])[list(model.feature)]
+    data_path = os.path.join(
+        "local",
+        "sample-test.csv",
+    )
     
+    # Load model
+    model: ClassifierWrapper = load_instance(model_path)
+    
+    print(model.version)
+    print(model.name)
+    
+    data_df = pd.read_csv(data_path)
     pred = model(data_df)
     
     print(pred)
+    print('\n')
 
 
 #######
@@ -92,9 +113,13 @@ def test_model() -> None:
 
 if __name__ == "__main__":
     
-    train_model()
-    # test_model()
+    # train_model()
     
+    model_type_list = ["catboost", "knn", "logistic_regression", "random_forest", "xgboost"]
+    result_path =  "classifier_20240730_144618"
+    
+    for model_type in model_type_list:
+        test_model(result_path, model_type)
     
     ##########################################################################
 

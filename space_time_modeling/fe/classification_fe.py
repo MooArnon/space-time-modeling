@@ -54,6 +54,7 @@ class ClassificationFE(BaseFE):
             n_lag: int = 15, 
             n_window: list[int] = [3, 9, 12, 15, 30],
             name: str = None,
+            ununsed_feature: list[str] = None
     ) -> None:
         """Initiate `ClassificationFE` instance, inherited base class.
         
@@ -73,12 +74,16 @@ class ClassificationFE(BaseFE):
         name: str
             Name of instance
             , by default None
+        ununsed_feature: list[str]
+            Name of unused feature, which will be dropped after processing.
+            , by default None
         """
         
         # Attributes
         # Main attributes
         self.set_control_column(control_column)
         self.set_target_column(target_column)
+        self.set_unused_feature(ununsed_feature)
         
         if label:
             self.set_label(label)
@@ -91,7 +96,7 @@ class ClassificationFE(BaseFE):
         # Set name of instance
         self.set_name(name)
         
-    #------------#
+    ##############
     # Properties #
     ##########################################################################
     # Main #
@@ -183,7 +188,7 @@ class ClassificationFE(BaseFE):
         
     ##########################################################################
     # FE #
-    #----#
+    ######
     
     @property
     def fe_name_list(self) -> list[str]:
@@ -246,6 +251,26 @@ class ClassificationFE(BaseFE):
             list of window column
         """
         self.__n_window = n_window
+    
+    ##########################################################################
+    
+    @property
+    def unused_feature(self) -> list[int]:
+        """List of unused feature
+        """
+        return self.__unused_feature
+    
+    ##########################################################################
+    
+    def set_unused_feature(self, unused_feature: list[str]) -> None:
+        """Control column for the class
+
+        Parameters
+        ----------
+        unused_feature : list[str]
+            list of window column
+        """
+        self.__unused_feature = unused_feature
     
     ##########
     # Wraper #
@@ -329,6 +354,9 @@ class ClassificationFE(BaseFE):
         
         df.dropna(inplace=True)
         
+        # Drop unwanted column
+        if self.unused_feature:
+            df.drop(columns=self.unused_feature, inplace=True)
         df.drop(
             columns=[self.target_column, self.control_column], 
             inplace=True,
@@ -414,7 +442,7 @@ class ClassificationFE(BaseFE):
     def percent_change_df(
             self,
             df: pd.DataFrame, 
-            n_window: list[int],
+            n_window: list[int] = None,
     ) -> pd.DataFrame:
         """Calculate percent changed from target column
 
@@ -430,6 +458,8 @@ class ClassificationFE(BaseFE):
         pd.DataFrame
             pandas data frame with column `percentage_change`
         """
+        if not n_window:
+            n_window = self.n_window
         for window in n_window:
             df[f'percentage_change_{window}'] = df[self.target_column]\
                 .pct_change(periods=window)
@@ -438,7 +468,11 @@ class ClassificationFE(BaseFE):
     ##########################################################################
     
     @process_dataframe_decorator
-    def rsi_df(self, df: pd.DataFrame, n_window: list[int]) -> pd.DataFrame:
+    def rsi_df(
+            self, 
+            df: pd.DataFrame, 
+            n_window: list[int] = None,
+    ) -> pd.DataFrame:
         """Calculate rsi from target column
 
         Parameters
@@ -454,6 +488,9 @@ class ClassificationFE(BaseFE):
             pd.DataFrame
             pandas data frame with column `rsi_<n>`
         """
+        if not n_window:
+            n_window = self.n_window
+        
         # Iterate over window
         for window in n_window: 
             
@@ -560,26 +597,46 @@ class ClassificationFE(BaseFE):
     ##########################################################################
     
     @process_dataframe_decorator
-    def ema(self, df: pd.DataFrame, periods: list[int]) -> pd.DataFrame:
+    def ema(self, df: pd.DataFrame, n_window: list[int] = None) -> pd.DataFrame:
         """Exponential moving average of target_column
 
         Parameters
         ----------
         df : pd.DataFrame
             Input dataframe
+        n_window: list[int]
+            List of window size
 
         Returns
         -------
         pd.DataFrame
             Output data frame with ma_< period int > as a column
         """
-        for period in periods:
-            df[f'ema_{period}'] = df[self.target_column]\
-                .ewm(span=period, adjust=False).mean()
+        if not n_window:
+            n_window = self.n_window
+        for window in n_window:
+            df[f'ema_{window}'] = df[self.target_column]\
+                .ewm(span=window, adjust=False).mean()
 
         return df
 
-    #-----------#
+    ##########################################################################
+    
+    @process_dataframe_decorator
+    def percent_diff_ema(
+            self, 
+            df: pd.DataFrame, 
+            n_window: list[int] = None,
+    ) -> pd.DataFrame:
+        if not n_window:
+            n_window = self.n_window
+        for window in n_window:
+            df[f'percentage_change_ema_{window}'] = \
+                (df['price'] - df[f'ema_{window}']) \
+                    / df[f'ema_{window}']
+        return df
+
+    #############
     # Utilities #
     ##########################################################################
     
@@ -621,4 +678,4 @@ class ClassificationFE(BaseFE):
     
     ##########################################################################
 
-#----------------------------------------------------------------------------#
+##############################################################################
