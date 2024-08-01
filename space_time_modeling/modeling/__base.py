@@ -214,12 +214,13 @@ class BaseModel:
         tuple[DataFrame, DataFrame, Series, Series]
             x_train, x_test, y_train, y_test
         """
-        x_train, x_test, y_train, y_test = train_test_split(
-            feature, 
-            label, 
-            test_size=self.test_size, 
-            random_state=42,
-        )
+        test_size = int(len(feature) * self.test_size)
+        train_size = len(feature) - test_size
+
+        x_train = feature.iloc[:train_size]
+        x_test = feature.iloc[train_size:]
+        y_train = label.iloc[:train_size]
+        y_test = label.iloc[train_size:]
         
         return x_train, x_test, y_train, y_test
     
