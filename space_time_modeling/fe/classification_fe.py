@@ -439,6 +439,44 @@ class ClassificationFE(BaseFE):
     ##########################################################################
     
     @process_dataframe_decorator
+    def bollinger_bands(
+            self, 
+            df:pd.DataFrame,
+            n_window: list[int] = None,   
+    ) -> pd.DataFrame:
+        """Calculate Bollinger Bands
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Target df
+        n_window : list[int], optional
+            List of window, by default None
+
+        Returns
+        -------
+        pd.DataFrame
+            pandas data frame with column `bollinger_bands`
+        """
+        if not n_window:
+            n_window = self.n_window
+        for window in n_window:
+            
+            # Moving Averages
+            df['SMA_10'] = df['price'].rolling(window=10).mean()
+            df['EMA_10'] = df['price'].ewm(span=10, adjust=False).mean()
+            
+            # Bollinger Bands
+            df[f'upper_band_{window}'] = df['SMA_10'] \
+                + 2 * df['price'].rolling(window=10).std()
+            df[f'lower_band_{window}'] = df['SMA_10'] \
+                - 2 * df['price'].rolling(window=10).std()
+
+        return df
+    
+    ##########################################################################
+    
+    @process_dataframe_decorator
     def percent_change_df(
             self,
             df: pd.DataFrame, 

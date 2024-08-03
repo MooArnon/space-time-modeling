@@ -64,7 +64,7 @@ def train_model() -> None:
         engine = "classification",
         label_column = label_column,
         feature_column = feature_column,
-        result_path = os.path.join("classifier"),
+        result_path = os.path.join("btc__15_test_size__50_it"),
         test_size = 0.15,
         n_iter = 50,
     )
@@ -113,14 +113,14 @@ def test_model(path: str, type: str) -> None:
 
 if __name__ == "__main__":
     
-    # train_model()
-    
+    train_model()
+    """
     model_type_list = ["catboost", "knn", "logistic_regression", "random_forest", "xgboost"]
     result_path =  "classifier_20240730_144618"
     
     for model_type in model_type_list:
         test_model(result_path, model_type)
-    
+    """
     ##########################################################################
 
 ##############################################################################
