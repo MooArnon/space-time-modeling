@@ -101,19 +101,19 @@ class BaseModel:
     ##########################################################################
     
     @property
-    def feature_column(self) -> str:
+    def feature_column(self) -> list[str]:
         """ Feature column """
         return self.__feature_column
     
     ##########################################################################
     
-    def set_feature_column(self, feature_column: str) -> None:
+    def set_feature_column(self, feature_column: list[str]) -> None:
         """Set feature_column attribute
 
         Parameters
         ----------
-        feature_column : str
-            String of feature column
+        feature_column : list[str]
+            list[str] of feature column
         """
         if self.label_column in feature_column:
             feature_column.remove(self.label_column)

@@ -41,6 +41,7 @@ class ClassificationModel(BaseModel):
             random_forest_params_dict: dict = None,
             logistic_regression_params_dict: dict = None,
             knn_params_dict: dict = None,
+            mutual_feature: bool = True,
     ) -> None:
         super().__init__(
             label_column, 
@@ -50,6 +51,7 @@ class ClassificationModel(BaseModel):
         )
         
         # Set attribute for tuning
+        self.set_mutual_feature(mutual_feature)
         self.set_n_iter(n_iter)
         self.set_cv(cv)
         
@@ -102,6 +104,25 @@ class ClassificationModel(BaseModel):
             Number of search
         """
         self.__cv = cv
+    
+    ##########################################################################
+    
+    @property
+    def mutual_feature(self) -> bool:
+        """ If true, rank important feature """
+        return self.__mutual_feature
+    
+    ##########################################################################
+    
+    def set_mutual_feature(self, mutual_feature: bool) -> None:
+        """set mutual_feature
+
+        Parameters
+        ----------
+        mutual_feature : bool
+            If true, rank important feature
+        """
+        self.__mutual_feature = mutual_feature
     
     ##########################################################################
     # Model #
@@ -306,6 +327,7 @@ class ClassificationModel(BaseModel):
                 'logistic_regression',
                 'knn',
             ], 
+            feature_rank: int = 15,
     ) -> None:
         """Tran and save model in model_name_list
 
@@ -317,7 +339,22 @@ class ClassificationModel(BaseModel):
             List of model name
             `xgboost`, `catboost`, `svc`, 
             `random_forest`, `logistic_regression`, `knn`,
+        feature_rank: int
+            Integer of top feature
         """
+        # Check if inportant feature is apply
+        # Set up new feature
+        if self.mutual_feature:
+            feature = preprocessing_pipeline.mutual_info(
+                df = df
+            ).head(feature_rank)['feature'].to_list()
+            
+            self.set_feature_column(feature)
+            
+            feature_column = self.feature_column
+            feature_column.append(self.label_column)
+            df = df[feature_column]
+            
         x_train, x_test, y_train, y_test = self.prepare(
             self.read_df(df)
         )
@@ -345,7 +382,7 @@ class ClassificationModel(BaseModel):
             wrapped_model = ClassifierWrapper(
                 model = tuned_model, 
                 name = model_name,
-                feature = list(x_train.columns),
+                feature = self.feature_column,
                 preprocessing_pipeline=preprocessing_pipeline
             )
             

@@ -99,7 +99,7 @@ class ClassifierWrapper(BaseWrapper):
     ##########################################################################
     
     def __call__(self, x: Union[list, pd.DataFrame], clean: bool = True): 
-        x = self.preprocessing_pipeline.transform_df(x).iloc[[-1]]
+        x = self.preprocessing_pipeline.transform_df(x)[self.feature].iloc[[-1]]
         pred = self.model.predict(x)
         if clean:
             pred = self.extract_value(pred)
