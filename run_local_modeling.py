@@ -33,6 +33,9 @@ def train_model() -> None:
         "percent_diff_ema",
     ]
     
+    n_window = [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 25, 75, 99]
+    ununsed_feature = [f"ema_{win}" for win in n_window]
+    
     df_path = os.path.join("local", "btc-all.csv")
     
     # Preprocess data
@@ -45,8 +48,8 @@ def train_model() -> None:
         target_column = target_column,
         label = label_column,
         fe_name_list = feature_column,
-        n_window = [7, 25, 99],
-        ununsed_feature = ['ema_7', 'ema_25', 'ema_99']
+        n_window = n_window,
+        ununsed_feature = ununsed_feature,
     )
     
     df_label = fe.add_label(
@@ -64,7 +67,7 @@ def train_model() -> None:
         engine = "classification",
         label_column = label_column,
         feature_column = feature_column,
-        result_path = os.path.join("btc__15_test_size__50_it"),
+        result_path = os.path.join("btc__15_test_size__50_it__top_15"),
         test_size = 0.15,
         n_iter = 50,
     )
@@ -116,7 +119,7 @@ if __name__ == "__main__":
     train_model()
     """
     model_type_list = ["catboost", "knn", "logistic_regression", "random_forest", "xgboost"]
-    result_path =  "classifier_20240730_144618"
+    result_path =  "test-mutual-feature_20240803_191220"
     
     for model_type in model_type_list:
         test_model(result_path, model_type)

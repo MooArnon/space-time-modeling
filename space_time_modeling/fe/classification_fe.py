@@ -6,6 +6,8 @@ import os
 import pandas as pd
 from typing import Union
 
+from sklearn.feature_selection import mutual_info_classif
+
 from .__base import BaseFE
 from ..utilities import serialize_instance
 
@@ -714,6 +716,32 @@ class ClassificationFE(BaseFE):
         
         return df
     
+    ##########################################################################
+    
+    def mutual_info(self, df: pd.DataFrame, label: str = None) -> pd.DataFrame:
+        
+        if not label:
+            label = self.label
+        
+        column = df.columns.to_list()
+        
+        column.remove(label)
+        
+        X = df[column]
+        y = df[self.label]
+        mutual_info = mutual_info_classif(X, y)
+
+        mutual_info_df = pd.DataFrame(
+            {'feature': column, 'mutual_information': mutual_info}
+        )
+        mutual_info_df.sort_values(
+            by='mutual_information', 
+            ascending=False, 
+            inplace=True,
+        )
+        
+        return mutual_info_df
+
     ##########################################################################
 
 ##############################################################################
