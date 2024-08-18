@@ -2,116 +2,122 @@
 # Import #
 ##############################################################################
 
-import pickle
 import os
 
 import pandas as pd
-import numpy as np
-import torch.nn as nn
 
+from space_time_modeling.fe import ClassificationFE 
 from space_time_modeling.modeling import modeling_engine
-from space_time_modeling.modeling import DeepClassificationModel
+from space_time_modeling.modeling import DeepClassificationModel 
+from space_time_modeling.modeling.__classification_wrapper import ClassifierWrapper
 from space_time_modeling.utilities import load_instance
 
-#######
-# Use #
+#########
+# Train #
 ##############################################################################
-if __name__ == "__main__":
-    
-    #############
-    # Attribute #
-    ##########################################################################
-    
-    pickle_preprocess_path = os.path.join(
-        "fe_15lag_3-9-12-15-30rolling_percent-change_3-9-12-15-30rsi",
-        "fe_15lag_3-9-12-15-30rolling_percent-change_3-9-12-15-30rsi_20240412_191021.pkl"
-    )
-    
-    df_path = os.path.join("local", "BTC-Hourly.csv")
-    
+
+def train_model() -> None:
+    # statics 
     label_column = "signal"
-    feature_column = ['lag_1_day', 'lag_2_day',
-        'lag_3_day',  'lag_4_day', 'lag_5_day', 'lag_6_day', 'lag_7_day',
-        'lag_8_day',  'lag_9_day', 'lag_10_day', 'lag_11_day', 'lag_12_day',
-        'lag_13_day', 'lag_14_day', 'lag_15_day', 'mean_3_day', 'std_3_day',
-        'mean_9_day', 'std_9_day', 'mean_12_day', 'std_12_day', 'mean_15_day',
-        'std_15_day', 'mean_30_day', 'std_30_day', 'percentage_change', 'rsi_3',
-        'rsi_9',      'rsi_12', 'rsi_15', 'rsi_30'
+    control_column = "scraped_timestamp"
+    target_column = "price"
+    
+    # Feature col 
+    feature_column = [
+        "percent_change_df",
+        "rsi_df",
+        "date_hour_df",
+        "ema",
+        "percent_diff_ema",
     ]
     
-    ###################
-    # Preprocess data #
-    ##########################################################################
+    n_window = [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 25, 75, 99]
+    ununsed_feature = [f"ema_{win}" for win in n_window]
     
+    df_path = os.path.join("local", "btc-all.csv")
+    
+    # Preprocess data
     df = pd.read_csv(df_path)
+    df.dropna(inplace=True)
+    df = df[[target_column, control_column]]
     
-    with open(pickle_preprocess_path, 'rb') as f:
-        
-        # Load the object stored in the pickle file
-        preprocessor = pickle.load(f)
-    
-    df = preprocessor.add_label(
-        df = df, 
-        target_column = "open",
+    fe = ClassificationFE(
+        control_column = control_column,
+        target_column = target_column,
+        label = label_column,
+        fe_name_list = feature_column,
+        n_window = n_window,
+        ununsed_feature = ununsed_feature,
     )
     
-    df = preprocessor.transform_df(df)
+    df_label = fe.add_label(
+        df,
+        target_column
+    )
     
-    #############
-    # Get model #
-    ##########################################################################
+    df_train = fe.transform_df(
+        df_label
+    )
     
+    # return df.columns
+    # Train model
     modeling: DeepClassificationModel = modeling_engine(
         engine = "deep_classification",
         label_column = label_column,
         feature_column = feature_column,
-        result_path = os.path.join("nn"),
-        mode ='random_search',
-        n_iter = 2,
-        lstm_params_dict = {
-            'lr': [0.00001, 0.0001, 0.001, 0.01, 0.1],
-            'epochs':[3, 4],
-            'criterion':[nn.BCELoss(), nn.HuberLoss()],
-            'module__hidden_layers': [
-                [8, 16, 8],
-                [16, 32, 16],
-                [8, 16, 16, 8],
-                [16, 32, 32, 16],
-                [8, 16, 32, 16, 8],
-            ],
-            'module__dropout': [0.1, 0.15, 0.2, 0.25]
-        },
-        dnn_params_dict = {
-            'lr': [0.00001, 0.0001, 0.001, 0.01, 0.1],
-            'epochs':[3, 4],
-            'criterion':[nn.BCELoss(), nn.HuberLoss()],
-            'module__hidden_layers': [
-                [8, 16, 8],
-                [16, 32, 16],
-                [8, 16, 16, 8],
-                [16, 32, 32, 16],
-                [8, 16, 32, 16, 8],
-            ],
-            'module__dropout': [0.1, 0.15, 0.2, 0.25]
-        }
+        result_path = os.path.join("deep_test"),
+        test_size = 0.03,
+        epoch_per_trial = 1,
+        max_trials = 1
     )
     
     modeling.modeling(
-        df = df,
-        model_name_list = ['lstm', 'dnn'],
-        batch_size = 32,
+        df = df_train, 
+        preprocessing_pipeline=fe,
+        model_name_list=['dnn', 'lstm', 'gru'],
+        feature_rank = 10,
     )
     
-    ##########################################################################
-    """
-    model_wrapper = load_instance("nn_20240412_202842/lstm/lstm_wrapper.pkl")
-    print(model_wrapper)
-    print(model_wrapper.feature)
-    print(df.head(5))
-    last_row = df[model_wrapper.feature].iloc[-1].to_list()
-    pred = model_wrapper(last_row, detensor=True)
+########
+# Test #
+##############################################################################
+
+def test_model(path: str, type: str) -> None:
+    model_path = os.path.join(
+        path,
+        type,
+        f"{type}.pkl",
+    )
+    
+    data_path = os.path.join(
+        "local",
+        "sample-test.csv",
+    )
+    
+    # Load model
+    model: ClassifierWrapper = load_instance(model_path)
+    
+    print(model.name)
+    print(model.feature)
+    
+    data_df = pd.read_csv(data_path)
+    pred = model(data_df)
+    
     print(pred)
-    """
+    print('\n')
+
+
+#######
+# Use #
+##############################################################################
+
+if __name__ == "__main__":
+    # train_model()
+    
+    result_path =  "deep_test_20240818_012426"
+    test_model(result_path, 'lstm')
+    test_model(result_path, 'gru')
+    test_model(result_path, 'dnn')
     
     ##########################################################################
 
