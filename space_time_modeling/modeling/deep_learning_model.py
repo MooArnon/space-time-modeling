@@ -2,223 +2,291 @@
 # Import #
 ##############################################################################
 
+from datetime import datetime
 from typing import Union
 
-import torch
-import torch.nn as nn
+import numpy as np
+import pandas as pd
+from keras.optimizers import Adam
+from tensorflow.keras.models import Model, Sequential
+from tensorflow.keras.layers import (
+    Dense, 
+    Dropout, 
+    LSTM,
+    GRU,
+    Input,
+)
 
-from .__base_deep import BaseDeep, BaseWrapper
+from .__base import BaseWrapper
 
-##########
-# Models #
+###########
+# Wrapper #
 ##############################################################################
-# Deep Neuron Network #
-#######################
 
-class DNN(BaseDeep):
+class DeepWrapper(BaseWrapper):
+    name = "deep_wrapper"
     def __init__(
             self,
-            input_dim: int, 
-            hidden_layers: list[int], 
-            output_dim: int,
-            dropout: float = 0.0,
+            model: Model, 
+            name: str, 
+            feature: list[str], 
+            preprocessing_pipeline: object,
     ):
-        super(DNN, self).__init__()
-        
-        # Initialize parameters
-        self.input_dim = input_dim
-        self.hidden_layers = hidden_layers
-        self.output_dim = output_dim
-        self.dropout = dropout
-        
-        # Define the layers
-        self.input_layer = nn.Linear(input_dim, hidden_layers[0])
-        self.hidden_layers = nn.ModuleList()
-        self.hidden_layers.append(nn.ReLU())
-        if dropout > 0:
-            self.hidden_layers.append(nn.Dropout(dropout))
-        for i in range(len(hidden_layers) - 1):
-            self.hidden_layers.append(
-                nn.Linear(hidden_layers[i], hidden_layers[i+1])
-            )
-            self.hidden_layers.append(nn.ReLU())
-            if dropout > 0:
-                self.hidden_layers.append(nn.Dropout(dropout))
-        self.output_layer = nn.Linear(hidden_layers[-1], output_dim)
-        self.sigmoid = nn.Sigmoid()
+        super(DeepWrapper, self).__init__(feature, preprocessing_pipeline)
+        self.set_model(model)
+        self.set_name(name)
+        self.set_version()
 
-    def forward(
-            self, 
-            x: Union[
-                list[float], 
-                torch.Tensor,
-            ],  
-    ) -> torch.Tensor:
-        """Forward layer
+    ##############
+    # Properties #
+    #########################################################################
+    
+    def set_model(self, model: object) -> None:
+        self.__model = model
+    
+    ##########################################################################
+    
+    @property
+    def model(self) -> object:
+        return self.__model
+    
+    ##########################################################################
+    
+    def set_name(self, name: str) -> None:
+        self.__name = name 
+    
+    ##########################################################################
+    
+    @property
+    def name(self) -> str:
+        return self.__name
+    
+    ##########################################################################
+    
+    def set_version(self, name: str = None) -> None:
+        now = datetime.now()
+        self.__version = f"{now.strftime('%Y%m%d.%H%M%S')}"
+        if name:
+            self.__version = f"{self.__version}.{name}"
+    
+    ##########################################################################
+    
+    @property
+    def version(self) -> str:
+        return self.__version
+    
+    ###########
+    # Methods #
+    #########################################################################
+    
+    def __call__(self, x: Union[list, pd.DataFrame], clean: bool = True): 
+        x = self.preprocessing_pipeline.transform_df(x)[self.feature].iloc[[-1]]
+        pred = self.model.predict(x)
+        if clean:
+            pred = self.extract_value(pred)
+            pred = int(pred)
+        return pred
+    
+    ##########################################################################
+    
+    @staticmethod
+    def extract_value(nested_list: Union[list, np.ndarray]):
+        if isinstance(nested_list, np.ndarray):
+            nested_list = nested_list.tolist()
+        while isinstance(nested_list, list):
+            nested_list = nested_list[-1]
+        return nested_list
 
-        Parameters
-        ----------
-        x : Union[torch.Tensor]
-            x as a feature data
+    ##########################################################################
 
-        Returns
-        -------
-        torch.Tensor
-            The label as a tensor
-        """
-        x = self.tensorize_data(x)
-        
-        # Forward pass through layers
-        out = self.input_layer(x)
-        for layer in self.hidden_layers:
-            out = layer(out)
-        out = self.output_layer(out)
-        out = self.sigmoid(out)
-        
-        return out
-    ##########################################################################   
-
+###############
+# Build model #
 ##############################################################################
-# Long Short-Term Memory #
-##########################
+# LSTM #
+########
 
-class LSTM(BaseDeep):
-    def __init__(
-            self,
-            input_dim: int, 
-            hidden_layers: list[int], 
-            output_dim: int,
-            dropout: float = 0.0
-    ):
-        super(LSTM, self).__init__()
-        
-        self.num_layers = len(hidden_layers)
-        self.input_dim = input_dim
-        self.hidden_layers = hidden_layers
-        self.output_dim = output_dim
-        self.dropout = dropout
-        
-        # Define the LSTM layers
-        self.lstm_layers = nn.ModuleList()
-        self.lstm_layers.append(nn.LSTM(input_dim, hidden_layers[0]))
-        for i in range(1, self.num_layers):
-            self.lstm_layers.append(
-                nn.LSTM(
-                    hidden_layers[i-1], 
-                    hidden_layers[i], 
+def build_lstm_model(hp, input_shape):
+    model = Sequential()
+    
+    model.add(Input(shape=input_shape))
+    
+    # Adding LSTM layers with tuned number of units
+    for i in range(hp.Int('num_layers', 1, 3)):
+        if i == 0:
+            # The first LSTM layer needs the input_shape parameter
+            model.add(
+                LSTM(
+                    units=hp.Int(
+                        'units_' + str(i), 
+                        min_value=16, 
+                        max_value=20, 
+                        step=2
+                    ),
+                    return_sequences=True \
+                        if i < hp.Int('num_layers', 1, 3) - 1 \
+                            else False
                 )
             )
-            
-        self.dropout = nn.Dropout(p=dropout)
-        
-        # Output layer
-        self.output_layer = nn.Linear(hidden_layers[-1], output_dim)
-        
-        # Activation function
-        self.sigmoid = nn.Sigmoid()
-
-    ##########################################################################
-    
-    def forward(self, x: Union[list[float], torch.Tensor]) -> torch.Tensor:
-        # Check and convert x to tensor
-        x = self.tensorize_data(x)
-        
-        # Forward pass through LSTM layers
-        # Add batch dimension
-        x = x.unsqueeze(0)  
-        
-        # Feed data to each layer
-        for layer in self.lstm_layers:
-            x, _ = layer(x)
-            x = self.dropout(x)
-        
-        # Only take the output from the final LSTM layer
-        out = x.squeeze(0)  # Remove batch dimension
-        out = self.output_layer(out)
-        out = self.sigmoid(out)
-        
-        return out
-
-    ##########################################################################
-
-##############################################################################
-
-############
-# Wrappers #
-##############################################################################
-# Deep Neuron Network #
-#######################
-
-class DNNWrapper(BaseWrapper):
-    name = "dnn_wrapper"
-    def __init__(self, model: nn.Module=None, feature: list[str] = None):
-        super(DNNWrapper, self).__init__(feature)
-        if model:
-            self.set_model(model)
-    
-    ##############
-    # Properties #
-    ##########################################################################
-    # Model #
-    #########
-    
-    def set_model(self, **kwargs) -> None:
-        self.__model = DNN(**kwargs)
-    
-    ##########################################################################
-    
-    @property
-    def model(self) -> nn.Module:
-        return self.__model
-
-    ###########
-    # Methods #
-    ##########################################################################
-    
-    def forward(self, x, detensor: bool = False):
-        if detensor:
-            return self.detensor(self.model(x))
         else:
-            return self.model(x)
+            # Subsequent LSTM layers don't need the input_shape parameter
+            model.add(
+                LSTM(
+                    units=hp.Int(
+                        'units_' + str(i), 
+                        min_value=16, 
+                        max_value=20, 
+                        step=2
+                    ),
+                    return_sequences=True \
+                        if i < hp.Int('num_layers', 1, 3) - 1 \
+                            else False
+                )
+            )
     
-    ##########################################################################
+    # Adding Dropout with tuned rate
+    model.add(
+        Dropout(
+            rate=hp.Float(
+                'dropout_rate', 
+                min_value=0.1, 
+                max_value=0.5, 
+                step=0.1
+            )
+        )
+    )
     
+    # Output layer for binary classification
+    model.add(Dense(1, activation='sigmoid'))
+    
+    # Compile the model with tuned learning rate
+    model.compile(
+        optimizer=Adam(
+            hp.Float(
+                'learning_rate', 
+                min_value=1e-4, 
+                max_value=10, 
+                sampling='log'
+            )
+        ),
+        loss='binary_crossentropy',
+        metrics=['accuracy']
+    )
+    
+    return model
+
 ##############################################################################
-# Long Short-Term Memory #
-##########################
+# GRU #
+#######
 
-class LSTMWrapper(BaseWrapper):
-    name = "lstm_wrapper"
-    def __init__(self, model: nn.Module=None, feature: list[str] = None):
-        super(LSTMWrapper, self).__init__(feature)
-        if model:
-            self.set_model(model)
+def build_gru_model(hp, input_shape):
+    model = Sequential()
+    
+    # Adding Input layer
+    model.add(Input(shape=input_shape))
+    
+    # Adding GRU layers with tuned number of units
+    for i in range(hp.Int('num_layers', 1, 3)):
+        model.add(
+            GRU(
+                units=hp.Int(
+                    'units_' + str(i), 
+                    min_value=16, 
+                    max_value=20, 
+                    step=2
+                ),
+                return_sequences=True if i < hp.Int('num_layers', 1, 3) - 1 \
+                    else False
+            )
+        )
+    
+    # Adding Dropout with tuned rate
+    model.add(
+        Dropout(
+            rate=hp.Float(
+                'dropout_rate', 
+                min_value=0.1, 
+                max_value=0.5, 
+                step=0.1
+            )
+        )
+    )
+    
+    # Output layer for binary classification
+    model.add(Dense(1, activation='sigmoid'))
+    
+    # Compile the model with tuned learning rate
+    model.compile(
+        optimizer=Adam(
+            hp.Float(
+                'learning_rate', 
+                min_value=1e-4, 
+                max_value=10, 
+                sampling='log'
+            )
+        ),
+        loss='binary_crossentropy',
+        metrics=['accuracy']
+    )
+    
+    return model
 
-    ##############
-    # Properties #
-    ##########################################################################
-    # Model #
-    #########
-    
-    def set_model(self, **kwargs) -> None:
-        self.__model = LSTM(**kwargs)
-    
-    ##########################################################################
-    
-    @property
-    def model(self) -> nn.Module:
-        return self.__model
+##############################################################################
+# DNN #
+#######
 
-    ###########
-    # Methods #
-    ##########################################################################
+def build_dnn_model(hp, input_shape):
+    model = Sequential()
     
-    def forward(self, x, detensor: bool = False):
-        if detensor:
-            return self.detensor(self.model(x))
-        else:
-            return self.model(x)
+    # Adding Input layer
+    model.add(Input(shape=input_shape))
     
-    ##########################################################################
+    # Adding hidden Dense layers with tuned number of units 
+    # and activation functions
+    for i in range(hp.Int('num_layers', 1, 5)):
+        model.add(
+            Dense(
+                units=hp.Int(
+                    'units_' + str(i), 
+                    min_value=32, 
+                    max_value=512, 
+                    step=32
+                ),
+                activation=hp.Choice(
+                    'activation_' + str(i), 
+                    ['relu', 'tanh', 'sigmoid'],
+                )
+            )
+        )
+        # Optional Dropout layer to prevent overfitting
+        if hp.Boolean('dropout_' + str(i)):
+            model.add(
+                Dropout(
+                    rate=hp.Float(
+                        'dropout_rate_' + str(i), 
+                        min_value=0.1, 
+                        max_value=0.5, 
+                        step=0.1
+                    )
+                )
+            )
+    
+    # Output layer for binary classification
+    model.add(Dense(1, activation='sigmoid'))
+    
+    # Compile the model with tuned learning rate
+    model.compile(
+        optimizer=Adam(
+            hp.Float(
+                'learning_rate', 
+                min_value=1e-4, 
+                max_value=10, 
+                sampling='log'
+            )
+        ),
+        loss='binary_crossentropy',
+        metrics=['accuracy']
+    )
+    
+    return model
 
 ##############################################################################
