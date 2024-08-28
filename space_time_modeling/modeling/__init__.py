@@ -66,38 +66,18 @@ def modeling_engine(
     
     deep_classification: DeepClassificationModel
     --------------------------------------------
-    mode: str 
-        mode of search
-        ,by default 'random_search'
-    
-    Search default parameters
-    ------------------------
-    `xgboost`: {
-        'learning_rate': uniform(0.001, 0.9),
-        'n_estimators': randint(10, 1000),
-        'max_depth': randint(3, 60),
-        'subsample': uniform(0.1, 0.9),
-        'colsample_bytree': uniform(0.1, 0.9),
-        'gamma': uniform(0, 0.9)
-    }
-    `dnn`: {
-        'lr': [0.00001, 0.0001, 0.001, 0.01, 0.1],
-        'epochs':[5, 10, 15, 30, 60, 100],
-        'criterion':[nn.BCELoss(), nn.HuberLoss()],
-        'module__hidden_layers': [
-            [8],
-            [16],
-            [32],
-            [64],
-            [8, 16, 8],
-            [16, 32, 16],
-            [8, 16, 16, 8],
-            [16, 32, 32, 16],
-            [8, 16, 32, 16, 8],
-        ],
-        'module__dropout': [0.1, 0.15, 0.2, 0.25]
-    }
-    `lstm`:
+    max_trials: int = 10
+        Number of trial at Gaussian search
+    executions_per_trial: int = 1
+        Number of execution per epoch, to reduce SD of accuracy
+    epoch_per_trial = 20
+        Number of epoch per trial
+    early_stop_min_delta=0.0001
+        The threshold to check at search stop
+    early_stop_patience=20
+        Number of minimum threshold that would end a trial
+    early_stop_verbose=1
+        Early stopping
     """
     if engine == 'classification':
         modeling = ClassificationModel(

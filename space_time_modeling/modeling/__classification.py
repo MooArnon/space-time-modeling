@@ -9,7 +9,7 @@ from catboost import CatBoostClassifier
 import pandas as pd
 from pandas.core.api import DataFrame, Series
 from sklearn.model_selection import RandomizedSearchCV
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, make_scorer
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -19,6 +19,7 @@ import xgboost as xgb
 
 from .__base import BaseModel
 from .__classification_wrapper import ClassifierWrapper
+from .custom_metric import custom_metric
 from ..utilities.utilities import serialize_instance
 
 ###########
@@ -701,15 +702,16 @@ class ClassificationModel(BaseModel):
         any
             Fine tuned model
         """
+        custom_scorer = make_scorer(custom_metric, greater_is_better=True)
+        
         print(param_dict)
         random_search = RandomizedSearchCV(
             estimator=model, 
             param_distributions=param_dict, 
             n_iter=self.n_iter, 
             cv=self.cv, 
-            random_state=42,
             verbose = 10,
-            scoring="f1",
+            scoring=custom_scorer,
         )
         # Fit the model to the training data
         random_search.fit(x_train, y_train)
