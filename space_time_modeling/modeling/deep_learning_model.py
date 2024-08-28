@@ -4,6 +4,7 @@
 
 from datetime import datetime
 from typing import Union
+import math
 
 import numpy as np
 import pandas as pd
@@ -15,9 +16,14 @@ from tensorflow.keras.layers import (
     LSTM,
     GRU,
     Input,
+    Conv1D,
+    MaxPooling1D, 
+    Flatten,
+    Reshape,
 )
 
 from .__base import BaseWrapper
+from .custom_metric import CustomMetric
 
 ###########
 # Wrapper #
@@ -111,7 +117,7 @@ def build_lstm_model(hp, input_shape):
     model.add(Input(shape=input_shape))
     
     # Adding LSTM layers with tuned number of units
-    for i in range(hp.Int('num_layers', 1, 3)):
+    for i in range(hp.Int('num_layers', 1, 10)):
         if i == 0:
             # The first LSTM layer needs the input_shape parameter
             model.add(
@@ -119,11 +125,11 @@ def build_lstm_model(hp, input_shape):
                     units=hp.Int(
                         'units_' + str(i), 
                         min_value=16, 
-                        max_value=20, 
-                        step=2
+                        max_value=1024, 
+                        step=16
                     ),
                     return_sequences=True \
-                        if i < hp.Int('num_layers', 1, 3) - 1 \
+                        if i < hp.Int('num_layers', 1, 10) - 1 \
                             else False
                 )
             )
@@ -134,11 +140,11 @@ def build_lstm_model(hp, input_shape):
                     units=hp.Int(
                         'units_' + str(i), 
                         min_value=16, 
-                        max_value=20, 
-                        step=2
+                        max_value=1024, 
+                        step=16
                     ),
                     return_sequences=True \
-                        if i < hp.Int('num_layers', 1, 3) - 1 \
+                        if i < hp.Int('num_layers', 1, 10) - 1 \
                             else False
                 )
             )
@@ -163,13 +169,13 @@ def build_lstm_model(hp, input_shape):
         optimizer=Adam(
             hp.Float(
                 'learning_rate', 
-                min_value=1e-4, 
-                max_value=10, 
+                min_value=1e-9, 
+                max_value=1, 
                 sampling='log'
             )
         ),
         loss='binary_crossentropy',
-        metrics=['accuracy']
+        metrics=[CustomMetric()]
     )
     
     return model
@@ -185,16 +191,16 @@ def build_gru_model(hp, input_shape):
     model.add(Input(shape=input_shape))
     
     # Adding GRU layers with tuned number of units
-    for i in range(hp.Int('num_layers', 1, 3)):
+    for i in range(hp.Int('num_layers', 1, 5)):
         model.add(
             GRU(
                 units=hp.Int(
                     'units_' + str(i), 
                     min_value=16, 
-                    max_value=20, 
-                    step=2
+                    max_value=512, 
+                    step=16
                 ),
-                return_sequences=True if i < hp.Int('num_layers', 1, 3) - 1 \
+                return_sequences=True if i < hp.Int('num_layers', 1, 5) - 1 \
                     else False
             )
         )
@@ -206,8 +212,21 @@ def build_gru_model(hp, input_shape):
                 'dropout_rate', 
                 min_value=0.1, 
                 max_value=0.5, 
-                step=0.1
+                step=0.05
             )
+        )
+    )
+    
+    # Adding a fully connected layer with tuned number of units
+    model.add(
+        Dense(
+            units=hp.Int(
+                'fc_units', 
+                min_value=16, 
+                max_value=512, 
+                step=16
+            ), 
+            activation='relu'
         )
     )
     
@@ -219,13 +238,13 @@ def build_gru_model(hp, input_shape):
         optimizer=Adam(
             hp.Float(
                 'learning_rate', 
-                min_value=1e-4, 
-                max_value=10, 
+                min_value=1e-9, 
+                max_value=1, 
                 sampling='log'
             )
         ),
         loss='binary_crossentropy',
-        metrics=['accuracy']
+        metrics=[CustomMetric()]
     )
     
     return model
@@ -242,18 +261,18 @@ def build_dnn_model(hp, input_shape):
     
     # Adding hidden Dense layers with tuned number of units 
     # and activation functions
-    for i in range(hp.Int('num_layers', 1, 5)):
+    for i in range(hp.Int('num_layers', 1, 16)):
         model.add(
             Dense(
                 units=hp.Int(
                     'units_' + str(i), 
-                    min_value=32, 
-                    max_value=512, 
+                    min_value=16, 
+                    max_value=2048, 
                     step=32
                 ),
                 activation=hp.Choice(
                     'activation_' + str(i), 
-                    ['relu', 'tanh', 'sigmoid'],
+                    ['relu'],
                 )
             )
         )
@@ -263,6 +282,81 @@ def build_dnn_model(hp, input_shape):
                 Dropout(
                     rate=hp.Float(
                         'dropout_rate_' + str(i), 
+                        min_value=0.1, 
+                        max_value=0.7, 
+                        step=0.05
+                    )
+                )
+            )
+    
+    # Output layer for binary classification
+    model.add(Dense(1, activation='sigmoid'))
+    
+    # Compile the model with tuned learning rate
+    model.compile(
+        optimizer=Adam(
+            hp.Float(
+                'learning_rate', 
+                min_value=1e-9, 
+                max_value=1, 
+                sampling='log'
+            )
+        ),
+        loss='binary_crossentropy',
+        metrics=[CustomMetric()]
+    )
+    
+    return model
+
+##############################################################################
+
+def build_cnn_model(hp, input_shape):
+    model = Sequential()
+    
+    model.add(Reshape((input_shape[0], 1), input_shape=input_shape))
+    
+    for i in range(hp.Int('num_conv_layers', 1, 10)):
+        model.add(
+            Conv1D(
+                filters=hp.Int('filters_' + str(i), min_value=32, max_value=256, step=32),
+                kernel_size=hp.Choice('kernel_size_' + str(i), values=[3, 5, 7]),
+                activation=hp.Choice('conv_activation_' + str(i), values=['relu', 'tanh']),
+                input_shape=input_shape if i == 0 else None,
+                padding='same'
+            )
+        )
+        model.add(MaxPooling1D(pool_size=hp.Choice('pool_size_' + str(i), values=[2, 3])))
+
+        if hp.Boolean('conv_dropout_' + str(i)):
+            model.add(Dropout(rate=hp.Float('conv_dropout_rate_' + str(i), min_value=0.1, max_value=0.5, step=0.1)))
+    
+    # Flatten the output of the conv layers to connect to Dense layers
+    model.add(Flatten())
+    
+    # Adding Fully Connected (Dense) layers
+    # Number of dense layer
+    for i in range(hp.Int('num_dense_layers', 1, 5)):  
+        model.add(
+            Dense(
+                units=hp.Int(
+                    'dense_units_' + str(i), 
+                    min_value=32, 
+                    max_value=512, 
+                    step=32
+                ),
+                activation=hp.Choice(
+                    'dense_activation_' + str(i), 
+                    values=['relu', 'tanh']
+                )
+            )
+        )
+        
+        # Optional Dropout to prevent overfitting in Dense layers
+        if hp.Boolean('dense_dropout_' + str(i)):
+            model.add(
+                Dropout(
+                    rate=hp.Float(
+                        'dense_dropout_rate_' + str(i), 
                         min_value=0.1, 
                         max_value=0.5, 
                         step=0.1
@@ -278,13 +372,13 @@ def build_dnn_model(hp, input_shape):
         optimizer=Adam(
             hp.Float(
                 'learning_rate', 
-                min_value=1e-4, 
-                max_value=10, 
+                min_value=1e-9, 
+                max_value=1, 
                 sampling='log'
             )
         ),
         loss='binary_crossentropy',
-        metrics=['accuracy']
+        metrics=[CustomMetric()]
     )
     
     return model

@@ -67,9 +67,9 @@ def train_model() -> None:
         engine = "classification",
         label_column = label_column,
         feature_column = feature_column,
-        result_path = os.path.join("btc__15_test_size__50_it__top_10"),
+        result_path = os.path.join("btc__30_it__top_15"),
         test_size = 0.03,
-        n_iter = 1,
+        n_iter = 30,
     )
     
     print(df_train.columns)

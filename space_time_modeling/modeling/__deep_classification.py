@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from pandas.core.api import DataFrame
 from sklearn.metrics import classification_report
+from tensorflow.keras.callbacks import EarlyStopping
 
 from .__base import BaseModel
 from .deep_learning_model import (
@@ -16,9 +17,10 @@ from .deep_learning_model import (
     build_lstm_model, 
     build_gru_model,
     build_dnn_model,
+    build_cnn_model,
 )
 from ..utilities.utilities import serialize_instance
-from keras_tuner import RandomSearch
+from keras_tuner import BayesianOptimization, Objective
 
 ###########
 # Classes #
@@ -32,12 +34,13 @@ class DeepClassificationModel(BaseModel):
             feature_column: list[str] = None, 
             result_path: str = None,
             test_size: float = 0.2,
-            focus_metric: str = 'accuracy',
             mutual_feature: bool = True,
-            lstm_param_dict: dict = None,
             max_trials: int = 10,
-            executions_per_trial: int = 3,
+            executions_per_trial: int = 1,
             epoch_per_trial = 20,
+            early_stop_min_delta=0.0001,
+            early_stop_patience=20,
+            early_stop_verbose=1,
     ) -> None:
         super().__init__(
             label_column, 
@@ -45,30 +48,19 @@ class DeepClassificationModel(BaseModel):
             result_path, 
             test_size,
         )
-
-        self.set_focus_metric(focus_metric)
         self.set_mutual_feature(mutual_feature)
-        
-        self.set_lstm_param(lstm_param_dict)
         
         self.max_trials = max_trials
         self.executions_per_trial = executions_per_trial
         self.epoch_per_trial = epoch_per_trial
+        self.early_stop_min_delta = early_stop_min_delta
+        self.early_stop_patience = early_stop_patience
+        self.early_stop_verbose = early_stop_verbose
         
     ##############
     # Properties #
     ##########################################################################
-    
-    def focus_metric(self) -> str:
-        return self.__focus_metric
-    
-    ##########################################################################
-    
-    def set_focus_metric(self, focus_metric: str) -> None:
-        self.__focus_metric = focus_metric
-    
-    ##########################################################################
-    
+
     @property
     def mutual_feature(self) -> bool:
         """ If true, rank important feature """
@@ -248,10 +240,18 @@ class DeepClassificationModel(BaseModel):
             input_shape: tuple
         ) -> None:
         
+        early_stopping = EarlyStopping(
+            monitor='val_loss',
+            min_delta=self.early_stop_min_delta,
+            patience=self.early_stop_patience,
+            verbose=self.early_stop_verbose,
+            restore_best_weights=True
+        )
+        
         # Instantiate the tuner
-        tuner = RandomSearch(
+        tuner = BayesianOptimization(
             lambda hp: model_builder(hp, input_shape),
-            objective='val_accuracy',
+            objective=Objective("val_custom_metric", "max"),
             max_trials=self.max_trials,
             executions_per_trial=self.executions_per_trial,
             directory='deep-log',
@@ -262,7 +262,8 @@ class DeepClassificationModel(BaseModel):
             x_train, 
             y_train, 
             epochs=self.epoch_per_trial, 
-            validation_data=(x_test, y_test)
+            validation_data=(x_test, y_test),
+            callbacks=[early_stopping],
         )
 
         best_model = tuner.get_best_models(num_models=1)[0]
@@ -340,6 +341,27 @@ class DeepClassificationModel(BaseModel):
         
         return self.train(
             build_dnn_model, 
+            x_train, 
+            x_test, 
+            y_train, 
+            y_test, 
+            input_shape,
+        )
+    
+    ##########################################################################
+    
+    def cnn(
+            self,
+            x_train: pd.DataFrame,
+            x_test: pd.DataFrame,
+            y_train: pd.Series,
+            y_test: pd.Series,
+    ) -> None:
+        
+        input_shape = (x_train.shape[1],)
+        
+        return self.train(
+            build_cnn_model, 
             x_train, 
             x_test, 
             y_train, 
