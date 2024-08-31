@@ -10,6 +10,7 @@ from pandas.core.api import Series as Series
 from sklearn.model_selection import train_test_split
 
 from ..utilities import read_df
+from space_time_modeling.fe import ClassificationFE 
 
 ###########
 # Classes #
@@ -264,7 +265,7 @@ class BaseWrapper():
     ##########################################################################
     
     @property
-    def preprocessing_pipeline(self) -> list[str]:
+    def preprocessing_pipeline(self) -> ClassificationFE:
         return self.__preprocessing_pipeline
     
     ##########################################################################
