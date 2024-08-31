@@ -384,7 +384,7 @@ class ClassificationModel(BaseModel):
                 model = tuned_model, 
                 name = model_name,
                 feature = self.feature_column,
-                preprocessing_pipeline=preprocessing_pipeline
+                preprocessing_pipeline = preprocessing_pipeline,
             )
             
             # Save model

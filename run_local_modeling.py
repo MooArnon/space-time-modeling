@@ -67,9 +67,9 @@ def train_model() -> None:
         engine = "classification",
         label_column = label_column,
         feature_column = feature_column,
-        result_path = os.path.join("btc__30_it__top_15"),
+        result_path = os.path.join("feat-wrap-eval"),
         test_size = 0.03,
-        n_iter = 30,
+        n_iter = 3,
     )
     
     print(df_train.columns)
@@ -78,7 +78,7 @@ def train_model() -> None:
     modeling.modeling(
         df = df_train, 
         preprocessing_pipeline=fe,
-        model_name_list=['xgboost', 'catboost', 'random_forest', 'logistic_regression', 'knn'],
+        model_name_list=['xgboost'],
         feature_rank = 10,
     )
     
@@ -104,27 +104,61 @@ def test_model(path: str, type: str) -> None:
     print(model.version)
     print(model.name)
     
-    data_df = pd.read_csv(data_path)
-    pred = model(data_df)
+    df = pd.read_csv(data_path)
+    pred = model(df)
     
     print(pred)
     print('\n')
 
+##############################################################################
+
+def eval_model(path: str, type: str) -> None:
+    model_path = os.path.join(
+        path,
+        type,
+        f"{type}.pkl",
+    )
+    
+    data_path = os.path.join(
+        "local",
+        "sample-test.csv",
+    )
+    
+    # Load model
+    model: ClassifierWrapper = load_instance(model_path)
+    
+    print(model.version)
+    print(model.name)
+    
+    df = pd.read_csv(data_path)
+    
+    pred = model.evaluate(
+        x_test=df,
+    )
+    
+    print(pred)
+    print('\n')
 
 #######
 # Use #
 ##############################################################################
 
 if __name__ == "__main__":
-    
-    train_model()
     """
+    train_model()
+    
     model_type_list = ["catboost", "knn", "logistic_regression", "random_forest", "xgboost"]
     result_path =  "test-mutual-feature_20240803_191220"
     
     for model_type in model_type_list:
         test_model(result_path, model_type)
     """
+    
+    eval_model(
+        'feat-wrap-eval_20240831_094158', 
+        'xgboost'
+    )
+    
     ##########################################################################
 
 ##############################################################################

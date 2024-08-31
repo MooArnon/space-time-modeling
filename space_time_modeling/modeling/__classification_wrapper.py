@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from .__base import BaseWrapper
+from .custom_metric import custom_metric
 
 ###########
 # Wrapper #
@@ -117,5 +118,37 @@ class ClassifierWrapper(BaseWrapper):
         return nested_list
 
     ##########################################################################
+    
+    def evaluate(self, x_test: pd.DataFrame) -> dict:
+        """Evaluate the model using the stored evaluation metric.
+
+        Parameters
+        ----------
+        x_test : pd.DataFrame
+            Test data features.
+
+        Returns
+        -------
+        dict
+            A dictionary containing evaluation metrics.
+        """
+        # Add label at data
+        label = self.preprocessing_pipeline.add_label(
+            x_test,
+            self.preprocessing_pipeline.target_column
+        )[self.preprocessing_pipeline.label]
+        
+        # Preprocess the test data
+        x_test_processed = self.preprocessing_pipeline.transform_df(x_test)\
+            [self.feature]
+        
+        # Predict on the test data
+        y_pred = self.model.predict(x_test_processed)
+        label = label[-y_pred.shape[0]:]
+
+        # Evaluate using the custom metric if provided
+        evaluation_result = custom_metric(label, y_pred)
+        
+        return evaluation_result
 
 ##############################################################################
