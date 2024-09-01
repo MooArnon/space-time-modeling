@@ -9,7 +9,52 @@ import numpy as np
 import pandas as pd
 
 from .__base import BaseWrapper
-from .custom_metric import custom_metric
+
+#################
+# Custom metric #
+##############################################################################
+
+def custom_metric(y_true, y_pred, alpha=0.5, beta1=1):
+    
+    # Convert predictions to class labels (0 or 1) based on a threshold
+    y_pred_labels = (y_pred > 0.5).astype(float)
+
+    # Calculate precision and recall for buy signals
+    true_positives = np.sum(y_true * y_pred_labels)
+    predicted_positives = np.sum(y_pred_labels)
+    actual_positives = np.sum(y_true)
+
+    precision_buy = true_positives \
+        / (predicted_positives + np.finfo(float).eps)
+    recall_buy = true_positives \
+        / (actual_positives + np.finfo(float).eps)
+
+    f1_buy = 2 * (precision_buy * recall_buy) \
+        / (precision_buy + recall_buy + np.finfo(float).eps)
+
+    # Calculate precision and recall for sell signals
+    true_negatives = np.sum((1 - y_true) * (1 - y_pred_labels))
+    predicted_negatives = np.sum(1 - y_pred_labels)
+    actual_negatives = np.sum(1 - y_true)
+
+    precision_sell = true_negatives \
+        / (predicted_negatives + np.finfo(float).eps)
+    recall_sell = true_negatives \
+        / (actual_negatives + np.finfo(float).eps)
+
+    f1_sell = 2 * (
+        precision_sell * recall_sell) \
+            / (precision_sell + recall_sell + np.finfo(float).eps
+    )
+
+    # PRB (Precision-Recall Balance)
+    prb = alpha * f1_buy + (1 - alpha) * f1_sell
+
+    # Composite Financial Performance Index (CFPI)
+    cfpi = beta1 * prb
+
+    return cfpi
+
 
 ###########
 # Wrapper #

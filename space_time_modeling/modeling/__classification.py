@@ -18,13 +18,14 @@ from scipy.stats import uniform, randint
 import xgboost as xgb
 
 from .__base import BaseModel
-from .__classification_wrapper import ClassifierWrapper
-from .custom_metric import custom_metric
+from .__classification_wrapper import ClassifierWrapper, custom_metric
 from ..utilities.utilities import serialize_instance
 
 ###########
 # Classes #
 ##############################################################################
+# Classifier #
+##############
 
 class ClassificationModel(BaseModel):
     name = 'modeling-instance'

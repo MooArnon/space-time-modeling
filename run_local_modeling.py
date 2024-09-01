@@ -153,9 +153,13 @@ if __name__ == "__main__":
     for model_type in model_type_list:
         test_model(result_path, model_type)
     """
+    """
+    result_path =  "feat-wrap-eval_20240901_123301"
     
+    test_model(result_path, 'xgboost')
+    """
     eval_model(
-        'feat-wrap-eval_20240831_094158', 
+        "feat-wrap-eval_20240901_123301", 
         'xgboost'
     )
     
