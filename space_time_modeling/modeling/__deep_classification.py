@@ -10,6 +10,8 @@ import pandas as pd
 from pandas.core.api import DataFrame
 from sklearn.metrics import classification_report
 from tensorflow.keras.callbacks import EarlyStopping
+from keras_tuner import BayesianOptimization, Objective
+import numpy as np
 
 from .__base import BaseModel
 from .deep_learning_model import (
@@ -20,11 +22,12 @@ from .deep_learning_model import (
     build_cnn_model,
 )
 from ..utilities.utilities import serialize_instance
-from keras_tuner import BayesianOptimization, Objective
 
 ###########
 # Classes #
 ##############################################################################
+# Classifier #
+##############
 
 class DeepClassificationModel(BaseModel):
     name = 'modeling-instance'

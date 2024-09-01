@@ -67,8 +67,8 @@ def train_model() -> None:
         feature_column = feature_column,
         result_path = os.path.join("deep_cnn__300e_50tri_60fr_"),
         test_size = 0.015,
-        epoch_per_trial = 50,
-        max_trials = 15,
+        epoch_per_trial = 3,
+        max_trials = 2,
         early_stop_min_delta = 0.000001,
         early_stop_patience = 1
     )
@@ -114,9 +114,10 @@ def test_model(path: str, type: str) -> None:
 ##############################################################################
 
 if __name__ == "__main__":
-    train_model()
+    # train_model()
     
-    # result_path =  "deep_test_20240818_012426"
+    result_path =  "deep_cnn__300e_50tri_60fr__20240901_121535"
+    test_model(result_path, 'cnn')
     # test_model(result_path, 'lstm')
     # test_model(result_path, 'gru')
     # test_model(result_path, 'dnn')
