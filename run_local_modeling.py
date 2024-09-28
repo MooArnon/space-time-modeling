@@ -69,11 +69,11 @@ def train_model() -> None:
         feature_column = feature_column,
         result_path = os.path.join("feat-wrap-eval"),
         test_size = 0.03,
-        n_iter = 3,
+        n_iter = 2,
+        push_to_s3 = True,
+        aws_s3_bucket = 'space-time-model',
+        aws_s3_prefix = 'classifier/btc',
     )
-    
-    print(df_train.columns)
-    print(df_train.shape)
     
     modeling.modeling(
         df = df_train, 
@@ -144,25 +144,27 @@ def eval_model(path: str, type: str) -> None:
 ##############################################################################
 
 if __name__ == "__main__":
-    """
-    train_model()
     
+    train_model()
+    """
     model_type_list = ["catboost", "knn", "logistic_regression", "random_forest", "xgboost"]
     result_path =  "test-mutual-feature_20240803_191220"
     
     for model_type in model_type_list:
         test_model(result_path, model_type)
+    
     """
     """
+    
     result_path =  "feat-wrap-eval_20240901_123301"
     
     test_model(result_path, 'xgboost')
-    """
+    
     eval_model(
         "feat-wrap-eval_20240901_123301", 
         'xgboost'
     )
-    
+    """
     ##########################################################################
 
 ##############################################################################

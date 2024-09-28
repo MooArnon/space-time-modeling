@@ -19,7 +19,7 @@ import xgboost as xgb
 
 from .__base import BaseModel
 from .__classification_wrapper import ClassifierWrapper, custom_metric
-from ..utilities.utilities import serialize_instance
+from ..utilities.utilities import serialize_instance, clear_and_push_to_s3
 
 ###########
 # Classes #
@@ -44,12 +44,18 @@ class ClassificationModel(BaseModel):
             logistic_regression_params_dict: dict = None,
             knn_params_dict: dict = None,
             mutual_feature: bool = True,
+            push_to_s3: bool = False,
+            aws_s3_bucket: str = None,
+            aws_s3_prefix: str = None,
     ) -> None:
         super().__init__(
-            label_column, 
-            feature_column, 
-            result_path, 
-            test_size,
+            label_column=label_column, 
+            feature_column=feature_column, 
+            result_path=result_path, 
+            test_size=test_size,
+            push_to_s3=push_to_s3,
+            aws_s3_bucket=aws_s3_bucket,
+            aws_s3_prefix=aws_s3_prefix,
         )
         
         # Set attribute for tuning
@@ -390,11 +396,18 @@ class ClassificationModel(BaseModel):
             
             # Save model
             path = os.path.join(self.result_path, model_name)
-            serialize_instance(
+            file_path = serialize_instance(
                 instance = wrapped_model,
                 path = path,
                 add_time = False,
             )
+            
+            if self.push_to_s3:
+                clear_and_push_to_s3(
+                    file_path,
+                    self.aws_s3_bucket,
+                    f"{self.aws_s3_prefix}/{model_name}/",
+                )
             
             # Save metrics
             df_classification_report.to_csv(
