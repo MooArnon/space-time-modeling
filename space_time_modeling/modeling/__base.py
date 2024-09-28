@@ -3,6 +3,7 @@
 ##############################################################################
 
 from datetime import datetime
+import os
 from typing import Union
 
 from pandas.core.api import DataFrame as DataFrame
@@ -25,6 +26,11 @@ class BaseModel:
             feature_column: list[str] = None,
             result_path: str = None,
             test_size: float = 0.2,
+            push_to_s3: bool = False,
+            aws_key: str = os.getenv("AWS_KEY"),
+            aws_secret: str = os.getenv("AWS_SECRET"),
+            aws_s3_bucket: str = None,
+            aws_s3_prefix: str = None,
     ) -> None:
         """Initiate BaseModel
 
@@ -52,6 +58,12 @@ class BaseModel:
         now = datetime.now()
         formatted_datetime = now.strftime("%Y%m%d_%H%M%S")
         self.result_path = f"{result_path}_{formatted_datetime}"
+        
+        self.push_to_s3 = push_to_s3
+        self.aws_key = aws_key
+        self.aws_secret = aws_secret
+        self.aws_s3_bucket = aws_s3_bucket
+        self.aws_s3_prefix = aws_s3_prefix
 
     ##########################################################################
     
