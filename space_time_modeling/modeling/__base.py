@@ -227,7 +227,10 @@ class BaseModel:
         tuple[DataFrame, DataFrame, Series, Series]
             x_train, x_test, y_train, y_test
         """
-        test_size = int(len(feature) * self.test_size)
+        if isinstance(self.test_size, float):
+            test_size = int(len(feature) * self.test_size)
+        elif isinstance(self.test_size, int):
+            test_size = self.test_size
         train_size = len(feature) - test_size
 
         x_train = feature.iloc[:train_size]

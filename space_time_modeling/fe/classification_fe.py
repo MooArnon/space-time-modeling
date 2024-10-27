@@ -56,7 +56,8 @@ class ClassificationFE(BaseFE):
             n_lag: int = 15, 
             n_window: list[int] = [3, 9, 12, 15, 30],
             name: str = None,
-            ununsed_feature: list[str] = None
+            ununsed_feature: list[str] = None,
+            keep_target: bool = None,
     ) -> None:
         """Initiate `ClassificationFE` instance, inherited base class.
         
@@ -80,6 +81,10 @@ class ClassificationFE(BaseFE):
             Name of unused feature, which will be dropped after processing.
             , by default None
         """
+        if not keep_target:
+            self.keep_target = True
+        else:
+            self.keep_target = keep_target
         
         # Attributes
         # Main attributes
@@ -274,8 +279,8 @@ class ClassificationFE(BaseFE):
         """
         self.__unused_feature = unused_feature
     
-    ##########
-    # Wraper #
+    ###########
+    # Wrapper #
     ##########################################################################
     
     def process_dataframe_decorator(func):
@@ -300,6 +305,12 @@ class ClassificationFE(BaseFE):
             return func(self, df, *args, **kwargs)
         return wrapper
     
+    ##########################################################################
+    
+    def sort_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        df[self.control_column] = pd.to_datetime(df[self.control_column])
+        return df.sort_values(by=self.control_column, ascending=True)
+    
     #######################
     # Feature engineering #
     ##########################################################################
@@ -310,6 +321,7 @@ class ClassificationFE(BaseFE):
             self, 
             df: Union[str, pd.DataFrame],
             serialized: bool = False,
+            keep_target: bool = True,
     ) -> pd.DataFrame:
         """Transform df to listed fe
         Available fe names are `lag_df`, `rolling_df`, 
@@ -359,10 +371,18 @@ class ClassificationFE(BaseFE):
         # Drop unwanted column
         if self.unused_feature:
             df.drop(columns=self.unused_feature, inplace=True)
-        df.drop(
-            columns=[self.target_column, self.control_column], 
-            inplace=True,
-        )
+        
+        # Keeping target column
+        if keep_target:
+            df.drop(
+                columns=[self.control_column], 
+                inplace=True,
+            )
+        else:
+            df.drop(
+                columns=[self.target_column, self.control_column], 
+                inplace=True,
+            )
         
         # Serialize fe if the path is specified
         if serialized:
@@ -718,7 +738,12 @@ class ClassificationFE(BaseFE):
     
     ##########################################################################
     
-    def mutual_info(self, df: pd.DataFrame, label: str = None) -> pd.DataFrame:
+    def mutual_info(
+            self, 
+            df: pd.DataFrame, 
+            label: str = None,
+            
+    ) -> pd.DataFrame:
         
         if not label:
             label = self.label
@@ -734,6 +759,10 @@ class ClassificationFE(BaseFE):
         mutual_info_df = pd.DataFrame(
             {'feature': column, 'mutual_information': mutual_info}
         )
+        
+        if self.keep_target:
+            mutual_info_df.loc[mutual_info_df['feature'] == self.target_column, 'mutual_information'] = 99
+
         mutual_info_df.sort_values(
             by='mutual_information', 
             ascending=False, 

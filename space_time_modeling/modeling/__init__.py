@@ -7,6 +7,7 @@ from pandas.core.api import DataFrame as DataFrame
 from .__base import BaseModel
 
 # Handel the import error from seperate 2 reqs.
+from .__classification import ClassificationModel
 try:
     from .__classification import ClassificationModel
 except ImportError:
@@ -79,6 +80,7 @@ def modeling_engine(
     early_stop_verbose=1
         Early stopping
     """
+    print(ClassificationModel)
     if engine == 'classification':
         modeling = ClassificationModel(
             label_column,
