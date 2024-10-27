@@ -18,7 +18,7 @@ from scipy.stats import uniform, randint
 import xgboost as xgb
 
 from .__base import BaseModel
-from .__classification_wrapper import ClassifierWrapper, custom_metric
+from .__classification_wrapper import ClassifierWrapper, custom_metric, profit_factor_metric, total_pnl
 from ..utilities.utilities import serialize_instance, clear_and_push_to_s3
 
 ###########
@@ -336,6 +336,7 @@ class ClassificationModel(BaseModel):
                 'knn',
             ], 
             feature_rank: int = 15,
+            weights: dict = None,
     ) -> None:
         """Tran and save model in model_name_list
 
@@ -350,6 +351,8 @@ class ClassificationModel(BaseModel):
         feature_rank: int
             Integer of top feature
         """
+        self.price_data = df[preprocessing_pipeline.target_column]
+
         # Check if inportant feature is apply
         # Set up new feature
         if self.mutual_feature:
@@ -384,6 +387,7 @@ class ClassificationModel(BaseModel):
                 x_test,
                 y_train,
                 y_test,
+                weights,
             )
             
             # Wrap model
@@ -416,7 +420,7 @@ class ClassificationModel(BaseModel):
                     "metrics.csv"
                 )
             )
-        
+            
     ##########################################################################
     # Model #
     ###########
@@ -429,6 +433,7 @@ class ClassificationModel(BaseModel):
             x_test: DataFrame, 
             y_train: Series, 
             y_test: Series, 
+            weights: dict,
     ) -> xgb.XGBClassifier:
         
         # Print line separate
@@ -446,6 +451,7 @@ class ClassificationModel(BaseModel):
             x_test,
             y_train,
             y_test,
+            weights,
         )
         
         return tuned_model, df_classification_report
@@ -460,6 +466,7 @@ class ClassificationModel(BaseModel):
             x_test: DataFrame, 
             y_train: Series, 
             y_test: Series, 
+            weights: dict,
     ) -> CatBoostClassifier:
         """Cat boosting model
 
@@ -502,6 +509,7 @@ class ClassificationModel(BaseModel):
             x_test,
             y_train,
             y_test,
+            weights,
         )
 
         return tuned_model, df_classification_report
@@ -515,6 +523,7 @@ class ClassificationModel(BaseModel):
             x_test: DataFrame, 
             y_train: Series, 
             y_test: Series, 
+            weights: dict,
     ) -> SVC:
         """SVC model
 
@@ -546,6 +555,7 @@ class ClassificationModel(BaseModel):
             x_test,
             y_train,
             y_test,
+            weights,
         )
         
         return tuned_model, df_classification_report
@@ -559,6 +569,7 @@ class ClassificationModel(BaseModel):
             x_test: DataFrame, 
             y_train: Series, 
             y_test: Series, 
+            weights: dict,
     ) -> RandomForestClassifier:
         """Random forest model
 
@@ -590,6 +601,7 @@ class ClassificationModel(BaseModel):
             x_test,
             y_train,
             y_test,
+            weights,
         )
         
         return tuned_model, df_classification_report
@@ -603,6 +615,7 @@ class ClassificationModel(BaseModel):
             x_test: DataFrame, 
             y_train: Series, 
             y_test: Series, 
+            weights: dict,
     ) -> LogisticRegression:
         """Logistic regression model
 
@@ -634,6 +647,7 @@ class ClassificationModel(BaseModel):
             x_test,
             y_train,
             y_test,
+            weights,
         )
         return tuned_model, df_classification_report
     
@@ -646,6 +660,7 @@ class ClassificationModel(BaseModel):
             x_test: DataFrame, 
             y_train: Series, 
             y_test: Series, 
+            weights: dict,
     ) -> LogisticRegression:
         """KNN model
 
@@ -677,6 +692,7 @@ class ClassificationModel(BaseModel):
             x_test,
             y_train,
             y_test,
+            weights,
         )
         
         return tuned_model, df_classification_report
@@ -693,6 +709,7 @@ class ClassificationModel(BaseModel):
             x_test: Series,
             y_train: DataFrame,
             y_test: DataFrame,
+            weights: dict,
     ) -> any:
         """Fine tune by random search over the params dict
 
@@ -716,7 +733,12 @@ class ClassificationModel(BaseModel):
         any
             Fine tuned model
         """
-        custom_scorer = make_scorer(custom_metric, greater_is_better=True)
+        custom_scorer = make_scorer(
+            profit_factor_metric, 
+            greater_is_better=True,
+            price_data=self.price_data,
+            weights=weights
+        )
         
         print(param_dict)
         random_search = RandomizedSearchCV(
@@ -740,9 +762,13 @@ class ClassificationModel(BaseModel):
 
         # Evaluate the model
         report = classification_report(y_test, y_pred, output_dict=True)
+        pnl = total_pnl(y_test, y_pred, self.price_data)
+        combined_metrics = profit_factor_metric(y_test, y_pred, self.price_data)
         
         # Convert the classification report to a DataFrame
         df_classification_report = pd.DataFrame(report).transpose()
+        df_classification_report['Custom metrics'] = combined_metrics
+        df_classification_report['PnL'] = pnl
         
         return best_model, df_classification_report
     

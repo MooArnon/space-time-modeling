@@ -68,8 +68,8 @@ def train_model() -> None:
         label_column = label_column,
         feature_column = feature_column,
         result_path = os.path.join("feat-wrap-eval"),
-        test_size = 0.03,
-        n_iter = 2,
+        test_size = int(56),
+        n_iter = 10,
         push_to_s3 = True,
         aws_s3_bucket = 'space-time-model',
         aws_s3_prefix = 'classifier/btc',
@@ -78,8 +78,8 @@ def train_model() -> None:
     modeling.modeling(
         df = df_train, 
         preprocessing_pipeline=fe,
-        model_name_list=['xgboost'],
-        feature_rank = 10,
+        model_name_list=['xgboost', 'catboost', 'random_forest', 'logistic_regression', 'knn'],
+        feature_rank = 15,
     )
     
 ########

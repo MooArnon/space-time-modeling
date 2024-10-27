@@ -55,6 +55,130 @@ def custom_metric(y_true, y_pred, alpha=0.5, beta1=1):
 
     return cfpi
 
+##############################################################################
+
+def profit_factor_metric(
+        y_true: pd.DataFrame, 
+        y_pred: list, 
+        price_data: pd.DataFrame=None, 
+        weights: dict=None,
+) -> float:
+    """Proceed financial evaluation
+
+    Parameters
+    ----------
+    y_true : pd.dataframe
+        Dataframe of true labels
+    y_pred : list
+        List of predicted labels
+    price_data : pd.dataframe, optional
+        Dataframe of price, by default None
+    weights : dict, optional
+        Weight for each metrics, by default None
+        if None, using 
+        weights = {
+            'pf': 0.25,         
+            'sr': 0.25,         
+            'win_rate': 0.5,   
+        }
+
+    Returns
+    -------
+    float
+        Weighted combine metrics
+
+    Raises
+    ------
+    ValueError
+        if no price data assigned
+    """
+    if price_data is None:
+        raise ValueError(
+            "price_data is required for financial metrics calculation."
+        )
+    
+    # Set default weights if none provided
+    if weights is None:
+        weights = {
+            'pf': 0.25,         
+            'sr': 0.25,         
+            'win_rate': 0.5,   
+        }
+    
+    # Align price_data with y_true indices
+    sliced_price_data = price_data.loc[y_true.index]
+    
+    # Calculate gains and losses
+    short_gains = ((y_pred == 0) & (y_true == 0)) \
+        * abs(sliced_price_data.shift(-1) - sliced_price_data)
+    long_gains = ((y_pred == 1) & (y_true == 1)) \
+        * (sliced_price_data.shift(-1) - sliced_price_data)
+    short_losses = ((y_pred == 0) & (y_true == 1)) \
+        * abs(sliced_price_data.shift(-1) - sliced_price_data)
+    long_losses = ((y_pred == 1) & (y_true == 0)) \
+        * abs(sliced_price_data.shift(-1) - sliced_price_data)
+
+    # Fill NaN from shifting prices
+    short_gains, long_gains = short_gains.fillna(0), long_gains.fillna(0)
+    short_losses, long_losses = short_losses.fillna(0), long_losses.fillna(0)
+    
+    # Aggregate gains and losses
+    total_gains = short_gains.sum() + long_gains.sum()
+    total_losses = short_losses.sum() + long_losses.sum()
+    
+    # Profit Factor (PF)
+    profit_factor = total_gains / total_losses if total_losses != 0 else float('inf')
+    
+    # Sharpe Ratio (SR)
+    returns = pd.concat([short_gains, long_gains]) - pd.concat([short_losses, long_losses])
+    mean_return = returns.mean()
+    std_return = returns.std()
+    sharpe_ratio = mean_return / std_return if std_return != 0 else 0
+    
+    # Win Rate
+    win_trades = (short_gains > 0).sum() + (long_gains > 0).sum()
+    total_trades = len(y_pred)
+    win_rate = win_trades / total_trades if total_trades != 0 else 0
+
+    # Combine metrics into a single score using weighted sum
+    combined_score = (
+        weights['pf'] * profit_factor +
+        weights['sr'] * sharpe_ratio +
+        weights['win_rate'] * win_rate 
+    )
+
+    return combined_score
+
+##############################################################################
+
+def total_pnl(y_true, y_pred, price_data=None):
+    if price_data is None:
+        raise ValueError("price_data is required for P&L calculation.")
+    
+    # Align price_data with y_true indices
+    sliced_price_data = price_data.loc[y_true.index]
+    
+    # Initialize total P&L
+    total_pnl_value = 0
+
+    # Calculate gains and losses for SHORT and LONG positions
+    short_gains = ((y_pred == 0) & (y_true == 0)) * abs(sliced_price_data.shift(-1) - sliced_price_data)
+    long_gains = ((y_pred == 1) & (y_true == 1)) * (sliced_price_data.shift(-1) - sliced_price_data)
+    short_losses = ((y_pred == 0) & (y_true == 1)) * abs(sliced_price_data.shift(-1) - sliced_price_data)
+    long_losses = ((y_pred == 1) & (y_true == 0)) * abs(sliced_price_data.shift(-1) - sliced_price_data)
+
+    # Fill NaN from shifting prices
+    short_gains, long_gains = short_gains.fillna(0), long_gains.fillna(0)
+    short_losses, long_losses = short_losses.fillna(0), long_losses.fillna(0)
+
+    # Aggregate gains and losses
+    total_gains = short_gains.sum() + long_gains.sum()
+    total_losses = short_losses.sum() + long_losses.sum()
+    
+    # Calculate total P&L
+    total_pnl_value = total_gains - total_losses
+
+    return total_pnl_value
 
 ###########
 # Wrapper #
