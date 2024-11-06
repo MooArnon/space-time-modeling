@@ -8,6 +8,7 @@ from typing import Union
 from catboost import CatBoostClassifier
 import pandas as pd
 from pandas.core.api import DataFrame, Series
+import lightgbm as lgb
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import classification_report, make_scorer
 from sklearn.svm import SVC
@@ -43,6 +44,7 @@ class ClassificationModel(BaseModel):
             random_forest_params_dict: dict = None,
             logistic_regression_params_dict: dict = None,
             knn_params_dict: dict = None,
+            lightgbm_params_dict: dict = None,
             mutual_feature: bool = True,
             push_to_s3: bool = False,
             aws_s3_bucket: str = None,
@@ -70,6 +72,7 @@ class ClassificationModel(BaseModel):
         self.set_random_forest_params_dict(random_forest_params_dict)
         self.set_logistic_regression_params_dict(logistic_regression_params_dict)
         self.set_knn_params_dict(knn_params_dict)
+        self.set_lightgbm_params_dict(lightgbm_params_dict)
 
     ##############
     # Properties #
@@ -261,8 +264,8 @@ class ClassificationModel(BaseModel):
         self.__random_forest_params_dict = random_forest_params_dict
     
     ##########################################################################
-    # Random Forest #
-    #################
+    # Logistic regression #
+    #######################
     
     @property
     def logistic_regression_params_dict(self):
@@ -318,6 +321,44 @@ class ClassificationModel(BaseModel):
                 'p': [1, 2] 
             }
         self.__knn_params_dict = knn_params_dict
+    
+    ##########################################################################
+    # LightGBM #
+    ############
+    
+    @property
+    def lightgbm_params_dict(self):
+        """ parameter of XGBoost model for random search """
+        return self.__lightgbm_params_dict
+
+    ##########################################################################
+    
+    def set_lightgbm_params_dict(
+            self, 
+            lightgbm_params_dict: dict = None
+    ) -> None:
+        """Set parameter of XGBoost model for random search
+
+        Parameters
+        ----------
+        lightgbm_params_dict : dict, optional
+            Parameters, by default None
+        """
+        if lightgbm_params_dict is None:
+            lightgbm_params_dict = {
+                'n_estimators': randint(10, 1000),
+                'num_leaves': randint(20, 150),
+                'max_depth': randint(3, 20),
+                'learning_rate': [0.01, 0.05, 0.1, 0.2],
+                'subsample': [0.6, 0.7, 0.8, 0.9, 1.0],
+                'colsample_bytree': [0.6, 0.7, 0.8, 0.9, 1.0],
+                'min_child_samples': randint(10, 100),
+                'boosting_type': ['gbdt', 'dart', 'goss'],
+                'reg_alpha': [0, 0.1, 0.5, 1],
+                'reg_lambda': [0, 0.1, 0.5, 1],
+                'max_bin': randint(10, 255),
+            }
+        self.__lightgbm_params_dict = lightgbm_params_dict
     
     ############
     # Modeling #
@@ -697,6 +738,52 @@ class ClassificationModel(BaseModel):
         
         return tuned_model, df_classification_report
 
+    ##########################################################################
+    # LightGBM #
+    ############
+    
+    def lightgbm(self,
+            x_train: DataFrame, 
+            x_test: DataFrame, 
+            y_train: Series, 
+            y_test: Series, 
+            weights: dict,
+    ) -> lgb.LGBMClassifier:
+        """LightGBM model
+
+        Parameters
+        ----------
+        x_train : DataFrame
+            x train as pandas data-frame
+        x_test : DataFrame
+            x test as pandas data-frame
+        y_train : Series
+            y train as pandas data-series
+        y_test : Series
+            y test as pandas data-series
+        
+        Returns
+        -------
+        lgb
+            LightFBM Classifier model
+        """
+        print("\n", "-"*72)
+        print("Tuning LightGBM")
+        model = lgb.LGBMClassifier()
+        
+        # Get random search
+        tuned_model, df_classification_report = self.random_search(
+            model,
+            self.lightgbm_params_dict,
+            x_train,
+            x_test,
+            y_train,
+            y_test,
+            weights,
+        )
+        
+        return tuned_model, df_classification_report
+    
     #############
     # Utilities #
     ##########################################################################
