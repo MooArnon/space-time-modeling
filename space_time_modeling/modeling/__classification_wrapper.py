@@ -63,91 +63,100 @@ def profit_factor_metric(
         price_data: pd.DataFrame=None, 
         weights: dict=None,
 ) -> float:
-    """Proceed financial evaluation
+    """
+    Enhanced financial evaluation metric for BTC futures trading signals with index alignment.
 
     Parameters
     ----------
-    y_true : pd.dataframe
-        Dataframe of true labels
+    y_true : pd.DataFrame
+        DataFrame of true labels.
     y_pred : list
-        List of predicted labels
-    price_data : pd.dataframe, optional
-        Dataframe of price, by default None
+        List of predicted labels.
+    price_data : pd.DataFrame, optional
+        DataFrame of price data, required for metric calculation.
     weights : dict, optional
-        Weight for each metrics, by default None
-        if None, using 
+        Weights for each metric. Defaults to:
         weights = {
-            'pf': 0.25,         
-            'sr': 0.25,         
-            'win_rate': 0.5,   
+            'pf': 0.3,         # Profit Factor
+            'sr': 0.3,         # Sortino Ratio
+            'win_rate': 0.3,   # Win Rate
+            'mdd': 0.1         # Maximum Drawdown
         }
 
     Returns
     -------
     float
-        Weighted combine metrics
+        Non-negative combined metric score.
 
     Raises
     ------
     ValueError
-        if no price data assigned
+        If price_data is not provided.
     """
     if price_data is None:
-        raise ValueError(
-            "price_data is required for financial metrics calculation."
-        )
+        raise ValueError("price_data is required for financial metrics calculation.")
     
+    # Align indices of y_true and price_data
+    y_true = y_true.reset_index(drop=True)
+    price_data = price_data.reset_index(drop=True)
+
     # Set default weights if none provided
     if weights is None:
         weights = {
-            'pf': 0.25,         
-            'sr': 0.25,         
-            'win_rate': 0.5,   
+            'pf': 0.3,
+            'sr': 0.3,
+            'win_rate': 0.3,
+            'mdd': 0.1
         }
-    
-    # Align price_data with y_true indices
-    sliced_price_data = price_data.loc[y_true.index]
-    
-    # Calculate gains and losses
-    short_gains = ((y_pred == 0) & (y_true == 0)) \
-        * abs(sliced_price_data.shift(-1) - sliced_price_data)
-    long_gains = ((y_pred == 1) & (y_true == 1)) \
-        * (sliced_price_data.shift(-1) - sliced_price_data)
-    short_losses = ((y_pred == 0) & (y_true == 1)) \
-        * abs(sliced_price_data.shift(-1) - sliced_price_data)
-    long_losses = ((y_pred == 1) & (y_true == 0)) \
-        * abs(sliced_price_data.shift(-1) - sliced_price_data)
 
-    # Fill NaN from shifting prices
-    short_gains, long_gains = short_gains.fillna(0), long_gains.fillna(0)
-    short_losses, long_losses = short_losses.fillna(0), long_losses.fillna(0)
-    
+    # Calculate gains and losses for LONG and SHORT predictions
+    short_gains = ((y_pred == 0) & (y_true == 0)) * abs(price_data.shift(-1) - price_data)
+    long_gains = ((y_pred == 1) & (y_true == 1)) * (price_data.shift(-1) - price_data)
+    short_losses = ((y_pred == 0) & (y_true == 1)) * abs(price_data.shift(-1) - price_data)
+    long_losses = ((y_pred == 1) & (y_true == 0)) * abs(price_data.shift(-1) - price_data)
+
+    # Fill NaN values from shifting prices
+    short_gains.fillna(0, inplace=True)
+    long_gains.fillna(0, inplace=True)
+    short_losses.fillna(0, inplace=True)
+    long_losses.fillna(0, inplace=True)
+
     # Aggregate gains and losses
     total_gains = short_gains.sum() + long_gains.sum()
     total_losses = short_losses.sum() + long_losses.sum()
-    
+
     # Profit Factor (PF)
     profit_factor = total_gains / total_losses if total_losses != 0 else float('inf')
-    
-    # Sharpe Ratio (SR)
+
+    # Sortino Ratio (SR)
     returns = pd.concat([short_gains, long_gains]) - pd.concat([short_losses, long_losses])
     mean_return = returns.mean()
-    std_return = returns.std()
-    sharpe_ratio = mean_return / std_return if std_return != 0 else 0
-    
+    downside_std = returns[returns < 0].std()
+    sortino_ratio = mean_return / downside_std if downside_std != 0 else 0
+
     # Win Rate
     win_trades = (short_gains > 0).sum() + (long_gains > 0).sum()
     total_trades = len(y_pred)
     win_rate = win_trades / total_trades if total_trades != 0 else 0
 
+    # Maximum Drawdown (MDD)
+    cumulative_returns = returns.cumsum()
+    drawdown = cumulative_returns - cumulative_returns.cummax()
+    max_drawdown = abs(drawdown.min()) if not drawdown.empty else 0
+
+    # Prevent negative scores by normalizing the MDD penalty
+    normalized_mdd = max_drawdown / (1 + max_drawdown)
+
     # Combine metrics into a single score using weighted sum
     combined_score = (
-        weights['pf'] * profit_factor +
-        weights['sr'] * sharpe_ratio +
-        weights['win_rate'] * win_rate 
+        weights['pf'] * max(profit_factor, 0) +
+        weights['sr'] * max(sortino_ratio, 0) +
+        weights['win_rate'] * max(win_rate, 0) -
+        weights['mdd'] * normalized_mdd
     )
 
-    return combined_score
+    # Ensure the score is non-negative
+    return max(combined_score, 0)
 
 ##############################################################################
 

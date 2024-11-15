@@ -3,10 +3,8 @@
 ##############################################################################
 
 import os
-import json
 
 import pandas as pd
-import requests
 
 from space_time_modeling.fe import ClassificationFE 
 from space_time_modeling.modeling import modeling_engine
@@ -67,9 +65,10 @@ def train_model() -> None:
         engine = "classification",
         label_column = label_column,
         feature_column = feature_column,
-        result_path = os.path.join("fine-tune-lightgbm"),
+        result_path = os.path.join("fine-tune-xgboost"),
         test_size = int(56),
-        n_iter = 10,
+        n_iter = 5,
+        cv = 10,
         push_to_s3 = True,
         aws_s3_bucket = 'space-time-model',
         aws_s3_prefix = 'classifier/btc',
@@ -78,7 +77,7 @@ def train_model() -> None:
     modeling.modeling(
         df = df_train, 
         preprocessing_pipeline=fe,
-        model_name_list=['lightgbm'],
+        model_name_list=['xgboost', 'catboost', 'random_forest', 'logistic_regression', 'knn'],
         feature_rank = 15,
     )
     

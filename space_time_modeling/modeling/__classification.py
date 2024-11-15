@@ -2,6 +2,7 @@
 # Import #
 ##############################################################################
 
+import json
 import os
 from typing import Union
 
@@ -9,7 +10,7 @@ from catboost import CatBoostClassifier
 import pandas as pd
 from pandas.core.api import DataFrame, Series
 import lightgbm as lgb
-from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import RandomizedSearchCV, TimeSeriesSplit
 from sklearn.metrics import classification_report, make_scorer
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
@@ -161,9 +162,9 @@ class ClassificationModel(BaseModel):
         """
         if xgboost_params_dict is None:
             xgboost_params_dict = {
-                'learning_rate': uniform(0.001, 0.9),
-                'n_estimators': randint(10, 1000),
-                'max_depth': [2, 6, 8, 12, 16, 24, 30, 40, 50],
+                'learning_rate': uniform(0.001, 0.3),
+                'n_estimators': randint(100, 1000),
+                'max_depth': randint(10, 100),
                 'subsample': uniform(0.1, 0.9),
                 'colsample_bytree': uniform(0.1, 0.9),
                 'gamma': uniform(0, 0.9)
@@ -461,6 +462,10 @@ class ClassificationModel(BaseModel):
                     "metrics.csv"
                 )
             )
+            
+            best_model_param = os.path.join(path,"best_model_param.json")
+            with open(best_model_param, 'w') as json_file:
+                json.dump(self.best_model_params_serializable, json_file, indent=4)
             
     ##########################################################################
     # Model #
@@ -827,14 +832,17 @@ class ClassificationModel(BaseModel):
             weights=weights
         )
         
+        tscv = TimeSeriesSplit(n_splits=self.cv)
+        
         print(param_dict)
         random_search = RandomizedSearchCV(
             estimator=model, 
             param_distributions=param_dict, 
             n_iter=self.n_iter, 
-            cv=self.cv, 
-            verbose = 10,
+            cv=tscv, 
+            verbose=10, 
             scoring=custom_scorer,
+            random_state=None,
         )
         # Fit the model to the training data
         random_search.fit(x_train, y_train)
@@ -843,6 +851,10 @@ class ClassificationModel(BaseModel):
         print("Best Hyperparameters:", random_search.best_params_)
         
         best_model = random_search.best_estimator_
+        model_params = best_model.get_params()
+        self.best_model_params_serializable = {
+            key: str(value) for key, value in model_params.items()
+        }
 
         # Make predictions on the test set
         y_pred = best_model.predict(x_test)
@@ -857,7 +869,10 @@ class ClassificationModel(BaseModel):
         df_classification_report['Custom metrics'] = combined_metrics
         df_classification_report['PnL'] = pnl
         
-        return best_model, df_classification_report
+        print(f"Best combined metric: {combined_metrics}")
+        print(f"Best PnL: {pnl}")
+        
+        return best_model, df_classification_report, 
     
     ##########################################################################
 
