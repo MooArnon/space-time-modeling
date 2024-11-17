@@ -7,6 +7,7 @@ import os
 from typing import Union
 
 from catboost import CatBoostClassifier
+import numpy as np
 import pandas as pd
 from pandas.core.api import DataFrame, Series
 import lightgbm as lgb
@@ -162,10 +163,10 @@ class ClassificationModel(BaseModel):
         """
         if xgboost_params_dict is None:
             xgboost_params_dict = {
-                'learning_rate': uniform(0.001, 0.3),
+                'learning_rate': uniform(0.001, 0.1),
                 'n_estimators': randint(100, 1000),
-                'max_depth': randint(10, 100),
-                'subsample': uniform(0.1, 0.9),
+                'max_depth': randint(3, 15),
+                'subsample': uniform(0.5, 0.9),
                 'colsample_bytree': uniform(0.1, 0.9),
                 'gamma': uniform(0, 0.9)
             }
@@ -861,17 +862,21 @@ class ClassificationModel(BaseModel):
 
         # Evaluate the model
         report = classification_report(y_test, y_pred, output_dict=True)
-        pnl = total_pnl(y_test, y_pred, self.price_data)
         combined_metrics = profit_factor_metric(y_test, y_pred, self.price_data)
         
         # Convert the classification report to a DataFrame
         df_classification_report = pd.DataFrame(report).transpose()
         df_classification_report['Custom metrics'] = combined_metrics
-        df_classification_report['PnL'] = pnl
+        df_classification_report['Custom metrics'] = combined_metrics
         
-        print(f"Best combined metric: {combined_metrics}")
-        print(f"Best PnL: {pnl}")
-        
+        # Add PnL for LONG and SHORT positions to the report
+        pnl = total_pnl(y_test, y_pred, self.price_data)
+        df_classification_report['LONG PnL'] = pnl['LONG PnL']
+        df_classification_report['SHORT PnL'] = pnl['SHORT PnL']
+
+        # Combine metrics (e.g., profit factor, Sharpe ratio, etc.)
+        df_classification_report['PnL'] = pnl['LONG PnL'] + pnl['SHORT PnL']
+
         return best_model, df_classification_report, 
     
     ##########################################################################

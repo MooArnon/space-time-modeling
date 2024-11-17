@@ -66,19 +66,19 @@ def train_model() -> None:
         label_column = label_column,
         feature_column = feature_column,
         result_path = os.path.join("fine-tune-xgboost"),
-        test_size = int(56),
-        n_iter = 5,
-        cv = 10,
-        push_to_s3 = True,
-        aws_s3_bucket = 'space-time-model',
-        aws_s3_prefix = 'classifier/btc',
+        test_size = int(120),
+        n_iter = 30,
+        cv = 5,
+        push_to_s3 = False,
+        # aws_s3_bucket = 'space-time-model',
+        # aws_s3_prefix = 'classifier/btc',
     )
     
     modeling.modeling(
         df = df_train, 
         preprocessing_pipeline=fe,
-        model_name_list=['xgboost', 'catboost', 'random_forest', 'logistic_regression', 'knn'],
-        feature_rank = 15,
+        model_name_list=['lightgbm', 'xgboost'],
+        feature_rank = 30,
     )
     
 ########

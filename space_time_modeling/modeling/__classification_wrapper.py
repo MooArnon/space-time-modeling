@@ -64,58 +64,25 @@ def profit_factor_metric(
         weights: dict=None,
 ) -> float:
     """
-    Enhanced financial evaluation metric for BTC futures trading signals with index alignment.
-
-    Parameters
-    ----------
-    y_true : pd.DataFrame
-        DataFrame of true labels.
-    y_pred : list
-        List of predicted labels.
-    price_data : pd.DataFrame, optional
-        DataFrame of price data, required for metric calculation.
-    weights : dict, optional
-        Weights for each metric. Defaults to:
-        weights = {
-            'pf': 0.3,         # Profit Factor
-            'sr': 0.3,         # Sortino Ratio
-            'win_rate': 0.3,   # Win Rate
-            'mdd': 0.1         # Maximum Drawdown
-        }
-
-    Returns
-    -------
-    float
-        Non-negative combined metric score.
-
-    Raises
-    ------
-    ValueError
-        If price_data is not provided.
+    Focus on stable, consistent gains with higher penalties for drawdowns and volatility.
     """
     if price_data is None:
         raise ValueError("price_data is required for financial metrics calculation.")
     
-    # Align indices of y_true and price_data
+    # Align indices
     y_true = y_true.reset_index(drop=True)
     price_data = price_data.reset_index(drop=True)
 
-    # Set default weights if none provided
     if weights is None:
-        weights = {
-            'pf': 0.3,
-            'sr': 0.3,
-            'win_rate': 0.3,
-            'mdd': 0.1
-        }
+        weights = {'pf': 0.3, 'sr': 0.4, 'win_rate': 0.2, 'mdd': 0.3}  # Emphasizing SR and MDD
 
-    # Calculate gains and losses for LONG and SHORT predictions
+    # Calculate gains and losses
     short_gains = ((y_pred == 0) & (y_true == 0)) * abs(price_data.shift(-1) - price_data)
     long_gains = ((y_pred == 1) & (y_true == 1)) * (price_data.shift(-1) - price_data)
     short_losses = ((y_pred == 0) & (y_true == 1)) * abs(price_data.shift(-1) - price_data)
     long_losses = ((y_pred == 1) & (y_true == 0)) * abs(price_data.shift(-1) - price_data)
 
-    # Fill NaN values from shifting prices
+    # Fill NaN values
     short_gains.fillna(0, inplace=True)
     long_gains.fillna(0, inplace=True)
     short_losses.fillna(0, inplace=True)
@@ -143,19 +110,16 @@ def profit_factor_metric(
     cumulative_returns = returns.cumsum()
     drawdown = cumulative_returns - cumulative_returns.cummax()
     max_drawdown = abs(drawdown.min()) if not drawdown.empty else 0
-
-    # Prevent negative scores by normalizing the MDD penalty
     normalized_mdd = max_drawdown / (1 + max_drawdown)
 
-    # Combine metrics into a single score using weighted sum
+    # Combine metrics with emphasis on stability
     combined_score = (
         weights['pf'] * max(profit_factor, 0) +
         weights['sr'] * max(sortino_ratio, 0) +
         weights['win_rate'] * max(win_rate, 0) -
-        weights['mdd'] * normalized_mdd
+        weights['mdd'] * normalized_mdd  # Strong penalty for large drawdowns
     )
 
-    # Ensure the score is non-negative
     return max(combined_score, 0)
 
 ##############################################################################
@@ -167,27 +131,26 @@ def total_pnl(y_true, y_pred, price_data=None):
     # Align price_data with y_true indices
     sliced_price_data = price_data.loc[y_true.index]
     
-    # Initialize total P&L
-    total_pnl_value = 0
+    # Initialize total P&L for each label (LONG and SHORT)
+    long_pnl = 0
+    short_pnl = 0
 
-    # Calculate gains and losses for SHORT and LONG positions
+    # Calculate gains and losses for LONG and SHORT positions
     short_gains = ((y_pred == 0) & (y_true == 0)) * abs(sliced_price_data.shift(-1) - sliced_price_data)
     long_gains = ((y_pred == 1) & (y_true == 1)) * (sliced_price_data.shift(-1) - sliced_price_data)
     short_losses = ((y_pred == 0) & (y_true == 1)) * abs(sliced_price_data.shift(-1) - sliced_price_data)
     long_losses = ((y_pred == 1) & (y_true == 0)) * abs(sliced_price_data.shift(-1) - sliced_price_data)
 
-    # Fill NaN from shifting prices
+    # Fill NaN values from shifting prices
     short_gains, long_gains = short_gains.fillna(0), long_gains.fillna(0)
     short_losses, long_losses = short_losses.fillna(0), long_losses.fillna(0)
 
-    # Aggregate gains and losses
-    total_gains = short_gains.sum() + long_gains.sum()
-    total_losses = short_losses.sum() + long_losses.sum()
-    
-    # Calculate total P&L
-    total_pnl_value = total_gains - total_losses
+    # Aggregate gains and losses for each position type
+    long_pnl = long_gains.sum() - long_losses.sum()
+    short_pnl = short_gains.sum() - short_losses.sum()
 
-    return total_pnl_value
+    # Return the PnL for each label (LONG, SHORT)
+    return {'LONG PnL': long_pnl, 'SHORT PnL': short_pnl}
 
 ###########
 # Wrapper #
