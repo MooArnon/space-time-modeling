@@ -92,54 +92,6 @@ class CustomMetric(tf.keras.metrics.Metric):
     def reset_state(self):
         self.cfpi_sum.assign(0.0)
         self.count.assign(0.0)
-        
-##############################################################################
-
-# Implementing the composite metric function
-def composite_metric(
-        y_true, 
-        y_pred, 
-        prices, 
-        alpha=0.5, 
-        beta1=0.4, 
-        beta2=0.4, 
-        beta3=0.2
-) -> tuple[float, float, float]:
-    precision_buy = precision_score(y_true, y_pred, pos_label=1)
-    recall_buy = recall_score(y_true, y_pred, pos_label=1)
-    precision_sell = precision_score(y_true, y_pred, pos_label=0)
-    recall_sell = recall_score(y_true, y_pred, pos_label=0)
-    
-    f1_buy = 2 * (precision_buy * recall_buy) / (precision_buy + recall_buy)
-    f1_sell = 2 * (precision_sell * recall_sell) / (precision_sell + recall_sell)
-    
-    prb = alpha * f1_buy + (1 - alpha) * f1_sell
-    
-    profit_buy, profit_sell, loss_buy, loss_sell = calculate_profit_loss(
-        y_true, 
-        y_pred, 
-        prices,
-    )
-    
-    fis = (profit_buy + profit_sell) / (loss_buy + loss_sell)
-    
-    returns = np.array([profit_buy - loss_buy, profit_sell - loss_sell])
-    srap = np.mean(returns) / np.std(returns)
-    
-    cfpi = beta1 * prb + beta2 * fis + beta3 * srap
-    
-    return cfpi, prb, fis, srap
-
-##############################################################################
-
-# Implementing the profit/loss function
-def calculate_profit_loss(y_true, y_pred, prices):
-    profit_buy = np.sum((y_pred == 1) & (y_true == 1) * prices)
-    profit_sell = np.sum((y_pred == 0) & (y_true == 0) * prices)
-    loss_buy = np.sum((y_pred == 1) & (y_true == 0) * prices)
-    loss_sell = np.sum((y_pred == 0) & (y_true == 1) * prices)
-    return profit_buy, profit_sell, loss_buy, loss_sell
-
 
 ###########
 # Wrapper #
@@ -233,7 +185,7 @@ def build_lstm_model(hp, input_shape):
     model.add(Input(shape=input_shape))
     
     # Adding LSTM layers with tuned number of units
-    for i in range(hp.Int('num_layers', 1, 10)):
+    for i in range(hp.Int('num_layers', 1, 4)):
         if i == 0:
             # The first LSTM layer needs the input_shape parameter
             model.add(
@@ -241,11 +193,11 @@ def build_lstm_model(hp, input_shape):
                     units=hp.Int(
                         'units_' + str(i), 
                         min_value=16, 
-                        max_value=1024, 
-                        step=16
+                        max_value=256, 
+                        step=32
                     ),
                     return_sequences=True \
-                        if i < hp.Int('num_layers', 1, 10) - 1 \
+                        if i < hp.Int('num_layers', 1, 6) - 1 \
                             else False
                 )
             )
@@ -256,11 +208,11 @@ def build_lstm_model(hp, input_shape):
                     units=hp.Int(
                         'units_' + str(i), 
                         min_value=16, 
-                        max_value=1024, 
-                        step=16
+                        max_value=256, 
+                        step=32
                     ),
                     return_sequences=True \
-                        if i < hp.Int('num_layers', 1, 10) - 1 \
+                        if i < hp.Int('num_layers', 1, 6) - 1 \
                             else False
                 )
             )
@@ -285,7 +237,7 @@ def build_lstm_model(hp, input_shape):
         optimizer=Adam(
             hp.Float(
                 'learning_rate', 
-                min_value=1e-9, 
+                min_value=1e-6, 
                 max_value=1, 
                 sampling='log'
             )
@@ -377,13 +329,13 @@ def build_dnn_model(hp, input_shape):
     
     # Adding hidden Dense layers with tuned number of units 
     # and activation functions
-    for i in range(hp.Int('num_layers', 1, 16)):
+    for i in range(hp.Int('num_layers', 1, 4)):
         model.add(
             Dense(
                 units=hp.Int(
                     'units_' + str(i), 
-                    min_value=16, 
-                    max_value=2048, 
+                    min_value=64, 
+                    max_value=1024, 
                     step=32
                 ),
                 activation=hp.Choice(
@@ -399,7 +351,7 @@ def build_dnn_model(hp, input_shape):
                     rate=hp.Float(
                         'dropout_rate_' + str(i), 
                         min_value=0.1, 
-                        max_value=0.7, 
+                        max_value=0.5, 
                         step=0.05
                     )
                 )
@@ -413,8 +365,8 @@ def build_dnn_model(hp, input_shape):
         optimizer=Adam(
             hp.Float(
                 'learning_rate', 
-                min_value=1e-9, 
-                max_value=1, 
+                min_value=1e-6, 
+                max_value=0.1, 
                 sampling='log'
             )
         ),

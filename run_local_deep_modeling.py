@@ -32,7 +32,7 @@ def train_model() -> None:
     ]
     
     n_window = [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 25, 75, 99]
-    # ununsed_feature = [f"ema_{win}" for win in n_window]
+    ununsed_feature = [f"ema_{win}" for win in n_window]
     
     df_path = os.path.join("local", "btc-all.csv")
     
@@ -47,7 +47,7 @@ def train_model() -> None:
         label = label_column,
         fe_name_list = feature_column,
         n_window = n_window,
-        # ununsed_feature = ununsed_feature,
+        ununsed_feature = ununsed_feature,
     )
     
     df_label = fe.add_label(
@@ -56,7 +56,8 @@ def train_model() -> None:
     )
     
     df_train = fe.transform_df(
-        df_label
+        df = df_label,
+        keep_target = False,
     )
     
     # return df.columns
@@ -65,18 +66,18 @@ def train_model() -> None:
         engine = "deep_classification",
         label_column = label_column,
         feature_column = feature_column,
-        result_path = os.path.join("deep_cnn__300e_50tri_60fr_"),
-        test_size = 0.015,
-        epoch_per_trial = 3,
-        max_trials = 2,
-        early_stop_min_delta = 0.000001,
+        result_path = os.path.join("lstm"),
+        test_size = 0.0062,
+        epoch_per_trial = 15,
+        max_trials = 10,
+        early_stop_min_delta = 0.00001,
         early_stop_patience = 1
     )
     
     modeling.modeling(
         df = df_train, 
         preprocessing_pipeline=fe,
-        model_name_list=['cnn'],
+        model_name_list=['lstm'],
         feature_rank = 60,
     )
     
@@ -114,10 +115,10 @@ def test_model(path: str, type: str) -> None:
 ##############################################################################
 
 if __name__ == "__main__":
-    # train_model()
+    train_model()
     
-    result_path =  "deep_cnn__300e_50tri_60fr__20240901_121535"
-    test_model(result_path, 'cnn')
+    # result_path =  "dnn_20241118_154813"
+    # test_model(result_path, 'dnn')
     # test_model(result_path, 'lstm')
     # test_model(result_path, 'gru')
     # test_model(result_path, 'dnn')
