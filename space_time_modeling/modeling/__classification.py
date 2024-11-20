@@ -380,6 +380,7 @@ class ClassificationModel(BaseModel):
             ], 
             feature_rank: int = 15,
             weights: dict = None,
+            drop_target_column: bool = True,
     ) -> None:
         """Tran and save model in model_name_list
 
@@ -407,8 +408,12 @@ class ClassificationModel(BaseModel):
             
             feature_column = self.feature_column
             feature_column.append(self.label_column)
-            df = df[feature_column]
             
+            if drop_target_column:
+                feature_column.remove(preprocessing_pipeline.target_column)
+            
+            df = df[feature_column]
+
         x_train, x_test, y_train, y_test = self.prepare(
             self.read_df(df)
         )

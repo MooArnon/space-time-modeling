@@ -183,7 +183,7 @@ class DeepClassificationModel(BaseModel):
             feature_column = self.feature_column
             feature_column.append(self.label_column)
             df = df[feature_column]
-            
+        
         x_train, x_test, y_train, y_test = self.prepare(
             self.read_df(df)
         )
