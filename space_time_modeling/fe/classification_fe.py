@@ -693,7 +693,7 @@ class ClassificationFE(BaseFE):
         for window in n_window:
             df[f'percentage_change_ema_{window}'] = \
                 (df['price'] - df[f'ema_{window}']) \
-                    / df[f'ema_{window}']
+                    / (df[f'ema_{window}'] + 1e-10)
         return df
 
     #############

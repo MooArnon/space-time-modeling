@@ -259,14 +259,14 @@ def build_gru_model(hp, input_shape):
     model.add(Input(shape=input_shape))
     
     # Adding GRU layers with tuned number of units
-    for i in range(hp.Int('num_layers', 1, 5)):
+    for i in range(hp.Int('num_layers', 1, 4)):
         model.add(
             GRU(
                 units=hp.Int(
                     'units_' + str(i), 
-                    min_value=16, 
-                    max_value=512, 
-                    step=16
+                    min_value=32, 
+                    max_value=256, 
+                    step=32
                 ),
                 return_sequences=True if i < hp.Int('num_layers', 1, 5) - 1 \
                     else False
@@ -291,8 +291,8 @@ def build_gru_model(hp, input_shape):
             units=hp.Int(
                 'fc_units', 
                 min_value=16, 
-                max_value=512, 
-                step=16
+                max_value=256, 
+                step=32
             ), 
             activation='relu'
         )
@@ -306,7 +306,7 @@ def build_gru_model(hp, input_shape):
         optimizer=Adam(
             hp.Float(
                 'learning_rate', 
-                min_value=1e-9, 
+                min_value=1e-6, 
                 max_value=1, 
                 sampling='log'
             )
@@ -383,7 +383,7 @@ def build_cnn_model(hp, input_shape):
     
     model.add(Reshape((input_shape[0], 1), input_shape=input_shape))
     
-    for i in range(hp.Int('num_conv_layers', 1, 10)):
+    for i in range(hp.Int('num_conv_layers', 1, 6)):
         model.add(
             Conv1D(
                 filters=hp.Int('filters_' + str(i), min_value=32, max_value=256, step=32),
@@ -403,18 +403,18 @@ def build_cnn_model(hp, input_shape):
     
     # Adding Fully Connected (Dense) layers
     # Number of dense layer
-    for i in range(hp.Int('num_dense_layers', 1, 5)):  
+    for i in range(hp.Int('num_dense_layers', 1, 3)):  
         model.add(
             Dense(
                 units=hp.Int(
                     'dense_units_' + str(i), 
                     min_value=32, 
-                    max_value=512, 
+                    max_value=256, 
                     step=32
                 ),
                 activation=hp.Choice(
                     'dense_activation_' + str(i), 
-                    values=['relu', 'tanh']
+                    values=['relu']
                 )
             )
         )
@@ -440,7 +440,7 @@ def build_cnn_model(hp, input_shape):
         optimizer=Adam(
             hp.Float(
                 'learning_rate', 
-                min_value=1e-9, 
+                min_value=1e-6, 
                 max_value=1, 
                 sampling='log'
             )

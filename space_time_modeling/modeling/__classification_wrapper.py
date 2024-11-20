@@ -120,7 +120,7 @@ def profit_factor_metric(
         weights['mdd'] * normalized_mdd  # Strong penalty for large drawdowns
     )
 
-    return max(combined_score, 0)
+    return combined_score
 
 ##############################################################################
 

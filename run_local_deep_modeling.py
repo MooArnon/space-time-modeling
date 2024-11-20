@@ -66,18 +66,18 @@ def train_model() -> None:
         engine = "deep_classification",
         label_column = label_column,
         feature_column = feature_column,
-        result_path = os.path.join("lstm"),
+        result_path = os.path.join("cnn"),
         test_size = 0.0062,
-        epoch_per_trial = 15,
+        epoch_per_trial = 10,
         max_trials = 10,
-        early_stop_min_delta = 0.00001,
-        early_stop_patience = 1
+        early_stop_min_delta = 0.001,
+        early_stop_patience = 3
     )
     
     modeling.modeling(
         df = df_train, 
         preprocessing_pipeline=fe,
-        model_name_list=['lstm'],
+        model_name_list=['cnn'],
         feature_rank = 60,
     )
     
@@ -86,11 +86,13 @@ def train_model() -> None:
 ##############################################################################
 
 def test_model(path: str, type: str) -> None:
-    model_path = os.path.join(
-        path,
-        type,
-        f"{type}.pkl",
-    )
+    # model_path = os.path.join(
+    #     path,
+    #     type,
+    #     f"{type}.pkl",
+    # )
+    
+    model_path = "dnn.pkl"
     
     data_path = os.path.join(
         "local",
@@ -104,6 +106,7 @@ def test_model(path: str, type: str) -> None:
     print(model.feature)
     
     data_df = pd.read_csv(data_path)
+    print(data_df.head(4))
     pred = model(data_df)
     
     print(pred)
@@ -117,8 +120,8 @@ def test_model(path: str, type: str) -> None:
 if __name__ == "__main__":
     train_model()
     
-    # result_path =  "dnn_20241118_154813"
-    # test_model(result_path, 'dnn')
+    #result_path =  "dnn_20241118_154813"
+    #test_model(result_path, 'dnn')
     # test_model(result_path, 'lstm')
     # test_model(result_path, 'gru')
     # test_model(result_path, 'dnn')
