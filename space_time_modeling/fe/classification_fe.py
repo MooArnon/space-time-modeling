@@ -701,47 +701,37 @@ class ClassificationFE(BaseFE):
     @process_dataframe_decorator
     def macd(
             self,
-            data, 
+            df, 
             short_window=12, 
             long_window=26, 
             signal_window=9
     ) -> pd.DataFrame:
         
         # Calculate short-term EMA
-        data['ema_short'] = data[self.target_column].ewm(span=short_window, adjust=False).mean()
+        df['ema_short'] = df[self.target_column].ewm(span=short_window, adjust=False).mean()
         
         # Calculate long-term EMA
-        data['ema_long'] = data[self.target_column].ewm(span=long_window, adjust=False).mean()
+        df['ema_long'] = df[self.target_column].ewm(span=long_window, adjust=False).mean()
         
         # MACD Line
-        data['macd_line'] = data['ema_short'] - data['ema_long']
+        df['macd_line'] = df['ema_short'] - df['ema_long']
         
         # Signal Line
-        data['signal_line'] = data['macd_line'].ewm(span=signal_window, adjust=False).mean()
+        df['signal_line'] = df['macd_line'].ewm(span=signal_window, adjust=False).mean()
         
         # MACD Histogram
-        data['macd_histogram'] = data['macd_line'] - data['signal_line']
+        df['macd_histogram'] = df['macd_line'] - df['signal_line']
         
         # Percent Change in MACD
-        data['macd_line_pct_change'] = data['macd_line'].pct_change() * 100
-        data['macd_histogram_pct_change'] = data['macd_histogram'].pct_change() * 100
+        df['macd_line_pct_change'] = df['macd_line'].pct_change() * 100
+        df['macd_histogram_pct_change'] = df['macd_histogram'].pct_change() * 100
         
         # Binary Crossovers
-        data['macd_above_signal'] = (data['macd_line'] > data['signal_line']).astype(int)
+        df['macd_above_signal'] = (df['macd_line'] > df['signal_line']).astype(int)
         
         # Manage features
-        data.drop(columns=['ema_short', 'ema_long'])
-        self.fe_name_list.remove("macd")
-        new_feature = [
-            'macd_line', 
-            'signal_line', 
-            'macd_histogram', 
-            'macd_line_pct_change', 
-            'macd_histogram_pct_change', 
-            'macd_above_signal',
-        ]
-        self.set_fe_name_list(self.fe_name_list + new_feature)
-        return data
+        df.drop(columns=['ema_short', 'ema_long'])
+        return df
 
     #############
     # Utilities #
