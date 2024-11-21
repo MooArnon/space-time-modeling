@@ -68,7 +68,7 @@ def train_model() -> None:
         feature_column = feature_column,
         result_path = os.path.join("fine-tune-xgboost"),
         test_size = int(7),
-        n_iter = 60,
+        n_iter = 15,
         cv = 3,
         push_to_s3 = False,
         # aws_s3_bucket = 'space-time-model',
@@ -145,7 +145,7 @@ def eval_model(path: str, type: str) -> None:
 
 if __name__ == "__main__":
     
-    train_model()
+    # train_model()
     """
     model_type_list = ["catboost", "knn", "logistic_regression", "random_forest", "xgboost"]
     result_path =  "test-mutual-feature_20240803_191220"
@@ -154,12 +154,13 @@ if __name__ == "__main__":
         test_model(result_path, model_type)
     
     """
-    """
     
-    result_path =  "feat-wrap-eval_20240901_123301"
+    
+    result_path =  "fine-tune-xgboost_20241121_212932"
     
     test_model(result_path, 'xgboost')
     
+    """
     eval_model(
         "feat-wrap-eval_20240901_123301", 
         'xgboost'
