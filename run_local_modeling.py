@@ -25,10 +25,11 @@ def train_model() -> None:
     # Feature col 
     feature_column = [
         "percent_change_df",
-        "rsi_df",
+        # "rsi_df",
         "date_hour_df",
         "ema",
-        "percent_diff_ema",
+        # "percent_diff_ema",
+        "macd",
     ]
     
     n_window = [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 25, 75, 99]
@@ -66,8 +67,8 @@ def train_model() -> None:
         label_column = label_column,
         feature_column = feature_column,
         result_path = os.path.join("fine-tune-xgboost"),
-        test_size = int(48),
-        n_iter = 15,
+        test_size = int(7),
+        n_iter = 60,
         cv = 3,
         push_to_s3 = False,
         # aws_s3_bucket = 'space-time-model',
