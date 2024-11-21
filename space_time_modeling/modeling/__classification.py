@@ -163,12 +163,12 @@ class ClassificationModel(BaseModel):
         """
         if xgboost_params_dict is None:
             xgboost_params_dict = {
-                'learning_rate': uniform(0.001, 0.1),
-                'n_estimators': randint(100, 1000),
-                'max_depth': randint(3, 15),
-                'subsample': uniform(0.5, 0.9),
-                'colsample_bytree': uniform(0.1, 0.9),
-                'gamma': uniform(0, 0.9)
+                'learning_rate': uniform(0.01, 0.5),  
+                'n_estimators': randint(50, 300),  
+                'max_depth': randint(3, 10),  
+                'subsample': uniform(0.5, 1.0),  
+                'colsample_bytree': uniform(0.5, 1.0),  
+                'gamma': uniform(0, 5)  
             }
         self.__xgboost_params_dict = xgboost_params_dict
     
@@ -417,7 +417,7 @@ class ClassificationModel(BaseModel):
         x_train, x_test, y_train, y_test = self.prepare(
             self.read_df(df)
         )
-        
+        print(x_train.columns)
         # Iterate over model_name_list
         for model_name in model_name_list:
             

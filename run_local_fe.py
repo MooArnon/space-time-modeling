@@ -38,6 +38,7 @@ if __name__ == "__main__":
         "ema",
         "percent_diff_ema",
         "bollinger_bands",
+        "macd"
     ]
     
     ###########
