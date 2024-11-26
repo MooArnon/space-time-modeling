@@ -396,7 +396,7 @@ class ClassificationModel(BaseModel):
             Integer of top feature
         """
         self.price_data = df[preprocessing_pipeline.target_column]
-
+        print(df.head())
         # Check if inportant feature is apply
         # Set up new feature
         if self.mutual_feature:
@@ -418,6 +418,7 @@ class ClassificationModel(BaseModel):
             self.read_df(df)
         )
         print(x_train.columns)
+        
         # Iterate over model_name_list
         for model_name in model_name_list:
             
@@ -472,7 +473,7 @@ class ClassificationModel(BaseModel):
             best_model_param = os.path.join(path,"best_model_param.json")
             with open(best_model_param, 'w') as json_file:
                 json.dump(self.best_model_params_serializable, json_file, indent=4)
-            
+        
     ##########################################################################
     # Model #
     ###########

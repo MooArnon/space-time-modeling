@@ -8,7 +8,7 @@ import pandas as pd
 
 from space_time_modeling.fe import ClassificationFE 
 from space_time_modeling.modeling import modeling_engine
-from space_time_modeling.modeling import ClassificationModel 
+from space_time_modeling.modeling import DeepClassificationModel 
 from space_time_modeling.modeling.__classification_wrapper import ClassifierWrapper
 from space_time_modeling.utilities import load_instance
 
@@ -31,12 +31,13 @@ def train_model() -> None:
         "percent_diff_ema",
         "macd",
         "roc",
-        # "bollinger_bands",
+        "bollinger_bands",
         "volatility",
         "moving_average_crossover",
+        "stochastic_oscillator",
     ]
     
-    n_window = [1, 2, 3, 4, 5, 9, 15]
+    n_window = [1, 3, 5, 7, 10, 15]
     ununsed_feature = [f"ema_{win}" for win in n_window]
     
     df_path = os.path.join("local", "btc-all.csv")
@@ -61,28 +62,37 @@ def train_model() -> None:
     )
     
     df_train = fe.transform_df(
-        df_label
+        df = df_label,
     )
+    
     # return df.columns
     # Train model
-    modeling: ClassificationModel = modeling_engine(
-        engine = "classification",
+    modeling: DeepClassificationModel = modeling_engine(
+        engine = "deep_classification",
         label_column = label_column,
         feature_column = feature_column,
-        result_path = os.path.join("roc_volt_macross"),
-        test_size = int(13),
-        n_iter = 50,
-        cv = 3,
-        push_to_s3 = False,
-        mutual_feature = False,
-        # aws_s3_bucket = 'space-time-model',
-        # aws_s3_prefix = 'classifier/btc',
+        result_path = os.path.join("short-term-high_feature"),
+        test_size = int(12),
+        epoch_per_trial = 25,
+        max_trials = 15,
+        early_stop_min_delta = 0.001,
+        early_stop_patience = 5,
+        push_to_s3 = True,
+        override_model_name_dict = {
+            "dnn": "dnn-short",
+            "lstm": "lstm-short",
+            "gru": "gru-short",
+            "cnn": "cnn-short",
+        },
+        aws_s3_bucket = 'space-time-model',
+        aws_s3_prefix = 'classifier/btc',
     )
     
     modeling.modeling(
         df = df_train, 
         preprocessing_pipeline=fe,
-        model_name_list=['xgboost', 'lightgbm', 'random_forest', 'logistic_regression', 'knn'],
+        model_name_list=['dnn', 'cnn', 'lstm', 'gru'],
+        feature_rank = 60,
     )
     
 ########
@@ -104,71 +114,30 @@ def test_model(path: str, type: str) -> None:
     # Load model
     model: ClassifierWrapper = load_instance(model_path)
     
-    print(model.version)
     print(model.name)
+    print(model.feature)
     
-    df = pd.read_csv(data_path)
-    pred = model(df)
+    data_df = pd.read_csv(data_path)
+    print(data_df.head(4))
+    pred = model(data_df)
     
     print(pred)
     print('\n')
 
-##############################################################################
-
-def eval_model(path: str, type: str) -> None:
-    model_path = os.path.join(
-        path,
-        type,
-        f"{type}.pkl",
-    )
-    
-    data_path = os.path.join(
-        "local",
-        "sample-test.csv",
-    )
-    
-    # Load model
-    model: ClassifierWrapper = load_instance(model_path)
-    
-    print(model.version)
-    print(model.name)
-    
-    df = pd.read_csv(data_path)
-    
-    pred = model.evaluate(
-        x_test=df,
-    )
-    
-    print(pred)
-    print('\n')
 
 #######
 # Use #
 ##############################################################################
 
 if __name__ == "__main__":
-    
     train_model()
-    """
-    model_type_list = ["catboost", "knn", "logistic_regression", "random_forest", "xgboost"]
-    result_path =  "test-mutual-feature_20240803_191220"
     
-    for model_type in model_type_list:
-        test_model(result_path, model_type)
+    # result_path =  "short-term-high_feature_20241125_230931"
+    # test_model(result_path, 'dnn-short')
+    # test_model(result_path, 'lstm-short')
+    # test_model(result_path, 'gru-short')
+    # test_model(result_path, 'dnn-short')
     
-    """
-    
-    
-    result_path =  "fine-tune-xgboost_20241121_212932"
-    
-    # test_model(result_path, 'xgboost')
-    
-    """
-    eval_model(
-        "feat-wrap-eval_20240901_123301", 
-        'xgboost'
-    )
-    """
     ##########################################################################
 
 ##############################################################################

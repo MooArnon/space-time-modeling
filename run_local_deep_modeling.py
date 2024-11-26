@@ -29,9 +29,14 @@ def train_model() -> None:
         "date_hour_df",
         "ema",
         "percent_diff_ema",
+        "macd",
+        "roc",
+        "bollinger_bands",
+        "volatility",
+        "moving_average_crossover",
     ]
     
-    n_window = [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 25, 75, 99]
+    n_window = [1, 2, 3, 4, 5, 6, 7, 9, 10]
     ununsed_feature = [f"ema_{win}" for win in n_window]
     
     df_path = os.path.join("local", "btc-all.csv")
@@ -57,7 +62,6 @@ def train_model() -> None:
     
     df_train = fe.transform_df(
         df = df_label,
-        keep_target = False,
     )
     
     # return df.columns
@@ -66,18 +70,27 @@ def train_model() -> None:
         engine = "deep_classification",
         label_column = label_column,
         feature_column = feature_column,
-        result_path = os.path.join("cnn"),
-        test_size = 0.0062,
-        epoch_per_trial = 10,
-        max_trials = 10,
+        result_path = os.path.join("short-term-high_feature"),
+        test_size = 0.0031,
+        epoch_per_trial = 25,
+        max_trials = 15,
         early_stop_min_delta = 0.001,
-        early_stop_patience = 3
+        early_stop_patience = 5,
+        push_to_s3 = True,
+        override_model_name_dict = {
+            "dnn": "dnn-short",
+            "lstm": "lstm-short",
+            "gru": "gru-short",
+            "cnn": "cnn-short",
+        },
+        aws_s3_bucket = 'space-time-model',
+        aws_s3_prefix = 'classifier/btc',
     )
     
     modeling.modeling(
         df = df_train, 
         preprocessing_pipeline=fe,
-        model_name_list=['cnn'],
+        model_name_list=['dnn', 'cnn', 'lstm', 'gru'],
         feature_rank = 60,
     )
     
@@ -86,13 +99,11 @@ def train_model() -> None:
 ##############################################################################
 
 def test_model(path: str, type: str) -> None:
-    # model_path = os.path.join(
-    #     path,
-    #     type,
-    #     f"{type}.pkl",
-    # )
-    
-    model_path = "dnn.pkl"
+    model_path = os.path.join(
+        path,
+        type,
+        f"{type}.pkl",
+    )
     
     data_path = os.path.join(
         "local",
@@ -118,13 +129,13 @@ def test_model(path: str, type: str) -> None:
 ##############################################################################
 
 if __name__ == "__main__":
-    train_model()
+    # train_model()
     
-    #result_path =  "dnn_20241118_154813"
-    #test_model(result_path, 'dnn')
-    # test_model(result_path, 'lstm')
-    # test_model(result_path, 'gru')
-    # test_model(result_path, 'dnn')
+    result_path =  "short-term-high_feature_20241125_230931"
+    test_model(result_path, 'dnn-short')
+    test_model(result_path, 'lstm-short')
+    test_model(result_path, 'gru-short')
+    test_model(result_path, 'dnn-short')
     
     ##########################################################################
 
