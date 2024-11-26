@@ -21,7 +21,8 @@ from .deep_learning_model import (
     build_dnn_model,
     build_cnn_model,
 )
-from ..utilities.utilities import serialize_instance
+from ..utilities.utilities import serialize_instance, clear_and_push_to_s3
+from .__classification_wrapper import total_pnl
 
 ###########
 # Classes #
@@ -37,19 +38,26 @@ class DeepClassificationModel(BaseModel):
             feature_column: list[str] = None, 
             result_path: str = None,
             test_size: float = 0.2,
-            mutual_feature: bool = True,
+            mutual_feature: bool = False,
             max_trials: int = 10,
             executions_per_trial: int = 1,
             epoch_per_trial = 20,
             early_stop_min_delta=0.0001,
             early_stop_patience=20,
             early_stop_verbose=1,
+            push_to_s3: bool = True,
+            aws_s3_bucket: str = None,
+            aws_s3_prefix: str = None,
+            override_model_name_dict: str = None
     ) -> None:
         super().__init__(
-            label_column, 
-            feature_column, 
-            result_path, 
-            test_size,
+            label_column=label_column, 
+            feature_column=feature_column, 
+            result_path=result_path, 
+            test_size=test_size,
+            push_to_s3=push_to_s3,
+            aws_s3_bucket=aws_s3_bucket,
+            aws_s3_prefix=aws_s3_prefix,
         )
         self.set_mutual_feature(mutual_feature)
         
@@ -59,6 +67,8 @@ class DeepClassificationModel(BaseModel):
         self.early_stop_min_delta = early_stop_min_delta
         self.early_stop_patience = early_stop_patience
         self.early_stop_verbose = early_stop_verbose
+        
+        self.override_model_name_dict = override_model_name_dict
         
     ##############
     # Properties #
@@ -171,6 +181,8 @@ class DeepClassificationModel(BaseModel):
         feature_rank: int
             Integer of top feature
         """
+        self.price_data = df[preprocessing_pipeline.target_column]
+        
         # Check if inportant feature is apply
         # Set up new feature
         if self.mutual_feature:
@@ -187,6 +199,10 @@ class DeepClassificationModel(BaseModel):
         x_train, x_test, y_train, y_test = self.prepare(
             self.read_df(df)
         )
+        
+        print(f"features: {x_train.columns}")
+        print(f"x_train's shape: {x_train.shape}")
+        print(f"x_test's shape: {x_test.shape}")
         
         # Iterate over model_name_list
         for model_name in model_name_list:
@@ -207,6 +223,10 @@ class DeepClassificationModel(BaseModel):
                 y_test,
             )
             
+            # Separate model
+            if self.override_model_name_dict:
+                    model_name = self.override_model_name_dict[model_name]
+
             # Wrap model
             wrapped_model = DeepWrapper(
                 model = tuned_model, 
@@ -217,14 +237,20 @@ class DeepClassificationModel(BaseModel):
             
             # Save model
             path = os.path.join(self.result_path, model_name)
-            serialize_instance(
+            file_path = serialize_instance(
                 instance = wrapped_model,
                 path = path,
                 add_time = False,
             )
+            if self.push_to_s3:
+                clear_and_push_to_s3(
+                    file_path,
+                    self.aws_s3_bucket,
+                    f"{self.aws_s3_prefix}/{model_name}/",
+                )
             
             # Save metrics
-            df_classification_report.to_csv(
+            pd.DataFrame(data=df_classification_report).to_csv(
                 os.path.join(
                     path,
                     "metrics.csv"
@@ -282,11 +308,19 @@ class DeepClassificationModel(BaseModel):
         y_pred = np.round(y_pred).astype(int) 
         
         # Create report
+        # Evaluate the model
         report = classification_report(y_test, y_pred, output_dict=True)
-        df_classification_report = pd.DataFrame(report).transpose()
-        print(df_classification_report)
+
+        # Add PnL for LONG and SHORT positions to the report
+        y_pred = np.concatenate(y_pred)
+        pnl = total_pnl(y_test, y_pred, self.price_data)
+        report['LONG PnL'] = pnl['LONG PnL']
+        report['SHORT PnL'] = pnl['SHORT PnL']
+
+        # Combine metrics (e.g., profit factor, Sharpe ratio, etc.)
+        report['PnL'] = pnl['LONG PnL'] + pnl['SHORT PnL']
         
-        return best_model, df_classification_report
+        return best_model, report
 
     ##########################################################################
     

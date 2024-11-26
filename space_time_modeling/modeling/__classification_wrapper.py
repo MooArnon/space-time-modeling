@@ -74,7 +74,7 @@ def profit_factor_metric(
     price_data = price_data.reset_index(drop=True)
 
     if weights is None:
-        weights = {'pf': 0.3, 'sr': 0.4, 'win_rate': 0.2, 'mdd': 0.3}  # Emphasizing SR and MDD
+        weights = weights = {'pf': 0.3,  'sr': 0.2,  'win_rate': 0.3,  'mdd': 0.2}
 
     # Calculate gains and losses
     short_gains = ((y_pred == 0) & (y_true == 0)) * abs(price_data.shift(-1) - price_data)
