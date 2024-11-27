@@ -164,3 +164,4 @@ local/
 credential/
 
 deep-log/
+set_env.sh

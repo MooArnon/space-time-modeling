@@ -9,7 +9,7 @@ import pandas as pd
 from space_time_modeling.fe import ClassificationFE 
 from space_time_modeling.modeling import modeling_engine
 from space_time_modeling.modeling import DeepClassificationModel 
-from space_time_modeling.modeling.__classification_wrapper import ClassifierWrapper
+from space_time_modeling.modeling.deep_learning_model import DeepWrapper
 from space_time_modeling.utilities import load_instance
 
 #########
@@ -91,7 +91,7 @@ def train_model() -> None:
     modeling.modeling(
         df = df_train, 
         preprocessing_pipeline=fe,
-        model_name_list=['dnn', 'cnn', 'lstm', 'gru'],
+        model_name_list=['dnn'],
         feature_rank = 60,
     )
     
@@ -112,7 +112,7 @@ def test_model(path: str, type: str) -> None:
     )
     
     # Load model
-    model: ClassifierWrapper = load_instance(model_path)
+    model: DeepWrapper = load_instance(model_path)
     
     print(model.name)
     print(model.feature)
@@ -130,10 +130,10 @@ def test_model(path: str, type: str) -> None:
 ##############################################################################
 
 if __name__ == "__main__":
-    train_model()
+    # train_model()
     
-    # result_path =  "short-term-high_feature_20241125_230931"
-    # test_model(result_path, 'dnn-short')
+    result_path =  "short-term-high_feature_20241127_090103"
+    test_model(result_path, 'dnn-short')
     # test_model(result_path, 'lstm-short')
     # test_model(result_path, 'gru-short')
     # test_model(result_path, 'dnn-short')
