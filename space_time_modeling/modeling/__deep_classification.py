@@ -231,7 +231,7 @@ class DeepClassificationModel(BaseModel):
             wrapped_model = DeepWrapper(
                 model = tuned_model, 
                 name = model_name,
-                feature = self.feature_column,
+                feature = x_train.columns.to_list(),
                 preprocessing_pipeline=preprocessing_pipeline
             )
             

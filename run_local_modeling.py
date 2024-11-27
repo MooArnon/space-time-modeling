@@ -71,7 +71,7 @@ def train_model() -> None:
         feature_column = feature_column,
         result_path = os.path.join("roc_volt_macross"),
         test_size = int(13),
-        n_iter = 50,
+        n_iter = 10,
         cv = 3,
         push_to_s3 = False,
         mutual_feature = False,
@@ -82,7 +82,7 @@ def train_model() -> None:
     modeling.modeling(
         df = df_train, 
         preprocessing_pipeline=fe,
-        model_name_list=['xgboost', 'lightgbm', 'random_forest', 'logistic_regression', 'knn'],
+        model_name_list=['xgboost'],
     )
     
 ########
@@ -148,7 +148,7 @@ def eval_model(path: str, type: str) -> None:
 
 if __name__ == "__main__":
     
-    train_model()
+    # train_model()
     """
     model_type_list = ["catboost", "knn", "logistic_regression", "random_forest", "xgboost"]
     result_path =  "test-mutual-feature_20240803_191220"
@@ -159,9 +159,9 @@ if __name__ == "__main__":
     """
     
     
-    result_path =  "fine-tune-xgboost_20241121_212932"
+    result_path =  "roc_volt_macross_20241127_085609"
     
-    # test_model(result_path, 'xgboost')
+    test_model(result_path, 'xgboost')
     
     """
     eval_model(
