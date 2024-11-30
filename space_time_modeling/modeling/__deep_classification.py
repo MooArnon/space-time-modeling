@@ -181,7 +181,6 @@ class DeepClassificationModel(BaseModel):
         feature_rank: int
             Integer of top feature
         """
-        self.price_data = df[preprocessing_pipeline.target_column]
         
         # Check if inportant feature is apply
         # Set up new feature
@@ -200,6 +199,17 @@ class DeepClassificationModel(BaseModel):
             self.read_df(df)
         )
         
+        # Create price data
+        self.price_data_train = x_train[preprocessing_pipeline.target_column]
+        self.price_data_test = x_test[preprocessing_pipeline.target_column]
+        
+        # Drop price data
+        x_train.drop(columns=[preprocessing_pipeline.target_column], inplace=True)
+        x_test.drop(columns=[preprocessing_pipeline.target_column], inplace=True)
+        
+        self.set_feature_column(x_train.columns.to_list())
+        
+        print(self.feature_column)
         print(f"features: {x_train.columns}")
         print(f"x_train's shape: {x_train.shape}")
         print(f"x_test's shape: {x_test.shape}")
@@ -222,7 +232,6 @@ class DeepClassificationModel(BaseModel):
                 y_train,
                 y_test,
             )
-            
             # Separate model
             if self.override_model_name_dict:
                     model_name = self.override_model_name_dict[model_name]
@@ -231,7 +240,7 @@ class DeepClassificationModel(BaseModel):
             wrapped_model = DeepWrapper(
                 model = tuned_model, 
                 name = model_name,
-                feature = x_train.columns.to_list(),
+                feature = self.feature_column,
                 preprocessing_pipeline=preprocessing_pipeline
             )
             
@@ -284,7 +293,8 @@ class DeepClassificationModel(BaseModel):
             max_trials=self.max_trials,
             executions_per_trial=self.executions_per_trial,
             directory='deep-log',
-            project_name=f"{model_builder.__name__}_{self.result_path}"
+            project_name=f"{model_builder.__name__}_{self.result_path}",
+            max_consecutive_failed_trials=10,
         )
         
         tuner.search(
@@ -313,7 +323,7 @@ class DeepClassificationModel(BaseModel):
 
         # Add PnL for LONG and SHORT positions to the report
         y_pred = np.concatenate(y_pred)
-        pnl = total_pnl(y_test, y_pred, self.price_data)
+        pnl = total_pnl(y_test, y_pred, self.price_data_test)
         report['LONG PnL'] = pnl['LONG PnL']
         report['SHORT PnL'] = pnl['SHORT PnL']
 
