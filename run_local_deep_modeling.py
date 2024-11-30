@@ -71,9 +71,9 @@ def train_model() -> None:
         label_column = label_column,
         feature_column = feature_column,
         result_path = os.path.join("short-term-high_feature"),
-        test_size = 0.0031,
+        test_size = int(15),
         epoch_per_trial = 25,
-        max_trials = 15,
+        max_trials = 10,
         early_stop_min_delta = 0.001,
         early_stop_patience = 5,
         push_to_s3 = True,
@@ -83,14 +83,14 @@ def train_model() -> None:
             "gru": "gru-short",
             "cnn": "cnn-short",
         },
-        aws_s3_bucket = 'space-time-model',
-        aws_s3_prefix = 'classifier/btc',
+        # aws_s3_bucket = 'space-time-model',
+        # aws_s3_prefix = 'classifier/btc',
     )
     
     modeling.modeling(
         df = df_train, 
         preprocessing_pipeline=fe,
-        model_name_list=['dnn', 'cnn', 'lstm', 'gru'],
+        model_name_list=['dnn'],
         feature_rank = 60,
     )
     
@@ -131,11 +131,11 @@ def test_model(path: str, type: str) -> None:
 if __name__ == "__main__":
     # train_model()
     
-    result_path =  "short-term-high_feature_20241125_230931"
+    result_path =  "short-term-high_feature_20241130_230021"
     test_model(result_path, 'dnn-short')
-    test_model(result_path, 'lstm-short')
-    test_model(result_path, 'gru-short')
-    test_model(result_path, 'dnn-short')
+    # test_model(result_path, 'lstm-short')
+    # test_model(result_path, 'gru-short')
+    # test_model(result_path, 'dnn-short')
     
     ##########################################################################
 

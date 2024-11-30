@@ -129,17 +129,17 @@ def total_pnl(y_true, y_pred, price_data=None):
         raise ValueError("price_data is required for P&L calculation.")
     
     # Align price_data with y_true indices
-    sliced_price_data = price_data.loc[y_true.index]
+    # price_data = price_data.loc[y_true.index]
     
     # Initialize total P&L for each label (LONG and SHORT)
     long_pnl = 0
     short_pnl = 0
 
     # Calculate gains and losses for LONG and SHORT positions
-    short_gains = ((y_pred == 0) & (y_true == 0)) * abs(sliced_price_data.shift(-1) - sliced_price_data)
-    long_gains = ((y_pred == 1) & (y_true == 1)) * (sliced_price_data.shift(-1) - sliced_price_data)
-    short_losses = ((y_pred == 0) & (y_true == 1)) * abs(sliced_price_data.shift(-1) - sliced_price_data)
-    long_losses = ((y_pred == 1) & (y_true == 0)) * abs(sliced_price_data.shift(-1) - sliced_price_data)
+    short_gains = ((y_pred == 0) & (y_true == 0)) * abs(price_data.shift(-1) - price_data)
+    long_gains = ((y_pred == 1) & (y_true == 1)) * (price_data.shift(-1) - price_data)
+    short_losses = ((y_pred == 0) & (y_true == 1)) * abs(price_data.shift(-1) - price_data)
+    long_losses = ((y_pred == 1) & (y_true == 0)) * abs(price_data.shift(-1) - price_data)
 
     # Fill NaN values from shifting prices
     short_gains, long_gains = short_gains.fillna(0), long_gains.fillna(0)
@@ -148,6 +148,11 @@ def total_pnl(y_true, y_pred, price_data=None):
     # Aggregate gains and losses for each position type
     long_pnl = long_gains.sum() - long_losses.sum()
     short_pnl = short_gains.sum() - short_losses.sum()
+    
+    print(f"y predic: {y_pred.tolist()}")
+    print(f"y actual: {[int(y) for y in y_true.to_list()]}")
+    print(f'LONG PnL: {long_pnl}')
+    print(f'SHORT PnL: {short_pnl}')
 
     # Return the PnL for each label (LONG, SHORT)
     return {'LONG PnL': long_pnl, 'SHORT PnL': short_pnl}

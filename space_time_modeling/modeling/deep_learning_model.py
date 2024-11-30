@@ -39,6 +39,7 @@ class CustomMetric(tf.keras.metrics.Metric):
         beta1=1, 
         beta2=0.4, 
         beta3=0.2, 
+        price_data=None,
         **kwargs,
     ) -> None:
         super(CustomMetric, self).__init__(name=name, **kwargs)
@@ -46,10 +47,12 @@ class CustomMetric(tf.keras.metrics.Metric):
         self.beta1 = beta1
         self.beta2 = beta2
         self.beta3 = beta3
+        self.price_data = price_data
         self.cfpi_sum = self.add_weight(name="cfpi_sum", initializer="zeros")
         self.count = self.add_weight(name="count", initializer="zeros")
 
     def update_state(self, y_true, y_pred, sample_weight=None):
+
         # Convert predictions to class labels (0 or 1) based on a threshold
         y_pred_labels = tf.cast(y_pred > 0.5, tf.float32)
         y_true = tf.cast(y_true, tf.float32)  # Ensure y_true is also float32
