@@ -161,7 +161,7 @@ class DeepWrapper(BaseWrapper):
         pred = self.model.predict(x)
         if clean:
             pred = self.extract_value(pred)
-            pred = int(pred)
+            pred = round(pred)
         return pred
     
     ##########################################################################

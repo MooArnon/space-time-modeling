@@ -72,9 +72,9 @@ def train_model() -> None:
         label_column = label_column,
         feature_column = feature_column,
         result_path = os.path.join("short-term-high_feature"),
-        test_size = int(12),
-        epoch_per_trial = 25,
-        max_trials = 15,
+        test_size = int(24),
+        epoch_per_trial = 35,
+        max_trials = 40,
         early_stop_min_delta = 0.001,
         early_stop_patience = 5,
         push_to_s3 = True,
@@ -92,7 +92,7 @@ def train_model() -> None:
         df = df_train, 
         preprocessing_pipeline=fe,
         model_name_list=['dnn'],
-        feature_rank = 60,
+        feature_rank = 71,
     )
     
 ########
@@ -132,7 +132,7 @@ def test_model(path: str, type: str) -> None:
 if __name__ == "__main__":
     # train_model()
     
-    result_path =  "short-term-high_feature_20241127_090103"
+    result_path =  "prod-test"
     test_model(result_path, 'dnn-short')
     # test_model(result_path, 'lstm-short')
     # test_model(result_path, 'gru-short')
