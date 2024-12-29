@@ -69,7 +69,7 @@ def train_model() -> None:
     modeling: DeepClassificationModel = modeling_engine(
         engine = "deep_classification",
         label_column = label_column,
-        feature_column = feature_column,
+        feature_column = fe.features,
         result_path = os.path.join("short-term-high_feature"),
         test_size = int(15),
         epoch_per_trial = 25,
@@ -131,7 +131,7 @@ def test_model(path: str, type: str) -> None:
 if __name__ == "__main__":
     # train_model()
     
-    result_path =  "short-term-high_feature_20241130_230021"
+    result_path =  "short-term-high_feature_20241229_221453"
     test_model(result_path, 'dnn-short')
     # test_model(result_path, 'lstm-short')
     # test_model(result_path, 'gru-short')
