@@ -87,6 +87,8 @@ class ClassificationFE(BaseFE):
             self.keep_target = True
         else:
             self.keep_target = keep_target
+            
+        self.features = []
         
         # Attributes
         # Main attributes
@@ -392,7 +394,11 @@ class ClassificationFE(BaseFE):
                 self, 
                 self.name
             )
-        
+        self.features = list(df.columns)
+        if 'price' in self.features:
+            self.features.remove('price')
+        if 'signal' in self.features:
+            self.features.remove('signal')
         return df
     
     ##########################################################################

@@ -63,12 +63,14 @@ def train_model() -> None:
     df_train = fe.transform_df(
         df_label
     )
+    
     # return df.columns
     # Train model
+    
     modeling: ClassificationModel = modeling_engine(
         engine = "classification",
         label_column = label_column,
-        feature_column = feature_column,
+        feature_column = fe.features,
         result_path = os.path.join("roc_volt_macross"),
         test_size = int(13),
         n_iter = 10,
@@ -84,6 +86,7 @@ def train_model() -> None:
         preprocessing_pipeline=fe,
         model_name_list=['xgboost'],
     )
+    print(fe.fe_name_list)
     
 ########
 # Test #
@@ -147,9 +150,11 @@ def eval_model(path: str, type: str) -> None:
 ##############################################################################
 
 if __name__ == "__main__":
-    """
-    train_model()
-    """
+    
+    # train_model()
+    result_path =  "roc_volt_macross_20241229_214833"
+    test_model(result_path, 'xgboost')
+    
     """
     model_type_list = ["catboost", "knn", "logistic_regression", "random_forest", "xgboost"]
     result_path =  "test-mutual-feature_20240803_191220"
@@ -158,10 +163,6 @@ if __name__ == "__main__":
         test_model(result_path, model_type)
     
     """
-    
-    
-    result_path =  "roc_volt_macross_20241229_184509"
-    test_model(result_path, 'xgboost')
     
     """
     eval_model(

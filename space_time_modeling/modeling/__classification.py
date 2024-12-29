@@ -397,6 +397,7 @@ class ClassificationModel(BaseModel):
         """
         self.price_data = df[preprocessing_pipeline.target_column]
         print(df.head())
+        
         # Check if inportant feature is apply
         # Set up new feature
         if self.mutual_feature:
@@ -411,14 +412,14 @@ class ClassificationModel(BaseModel):
             
             if drop_target_column:
                 feature_column.remove(preprocessing_pipeline.target_column)
-            
-            df = df[feature_column]
 
         x_train, x_test, y_train, y_test = self.prepare(
             self.read_df(df)
         )
-        print(x_train.columns)
         
+        x_train = x_train[preprocessing_pipeline.features]
+        x_test = x_test[preprocessing_pipeline.features]
+    
         # Iterate over model_name_list
         for model_name in model_name_list:
             
