@@ -425,12 +425,12 @@ class ClassificationFE(BaseFE):
     
     @process_dataframe_decorator
     def stochastic_oscillator(
-        self, 
-        df: pd.DataFrame, 
-        n_window: list[int] = None
+            self, 
+            df: pd.DataFrame, 
+            n_window: list[int] = None
     ) -> pd.DataFrame:
         """
-        Calculate the Stochastic Oscillator (%K and %D).
+        Calculate the Stochastic Oscillator (%K and %D) as relative features and remove unnecessary columns.
 
         Parameters
         ----------
@@ -442,33 +442,29 @@ class ClassificationFE(BaseFE):
         Returns
         -------
         pd.DataFrame
-            DataFrame with added %K and %D columns.
+            DataFrame with added %K and %D columns as relative features.
         """
         if not n_window:
             n_window = self.n_window 
-        
+
         for window in n_window:
             if window < 2:
                 continue
             
-            # Rolling window calculations
-            df[f'low_{window}'] = df[self.target_column].rolling(window).min()
-            df[f'high_{window}'] = df[self.target_column].rolling(window).max()
-            
+            # Calculate low and high of the rolling window
+            low = df[self.target_column].rolling(window).min()
+            high = df[self.target_column].rolling(window).max()
+
             # %K calculation
             df[f'stoch_k_{window}'] = (
-                (df[self.target_column] - df[f'low_{window}']) / 
-                (df[f'high_{window}'] - df[f'low_{window}'])
+                (df[self.target_column] - low) / 
+                (high - low)
             ) * 100
-            
+
             # %D calculation (3-period SMA of %K)
             df[f'stoch_d_{window}'] = df[f'stoch_k_{window}'].rolling(window=3).mean()
 
-            # Drop intermediate columns if not needed
-            df.drop(columns=[f'low_{window}', f'high_{window}'], inplace=True)
-        
         return df
-
     
     ##########################################################################
     
@@ -517,9 +513,7 @@ class ClassificationFE(BaseFE):
             df: pd.DataFrame, 
             n_window: list[int] = None,
     ) -> pd.DataFrame:
-        """Calculate Bollinger Bands based on EMA instead of SMA.
-        
-        Skips calculation for windows where the standard deviation is undefined (e.g., window=1).
+        """Calculate relative Bollinger Bands using EMA and exclude absolute bands.
         
         Parameters
         ----------
@@ -531,24 +525,25 @@ class ClassificationFE(BaseFE):
         Returns
         -------
         pd.DataFrame
-            Updated dataframe with Bollinger Band columns
+            Updated dataframe with only relative Bollinger Band columns
         """
         if not n_window:
             n_window = self.n_window
-            
+
         for window in n_window:
-            # Skip calculation if window size is too small to calculate a meaningful rolling std
             if window < 2:
                 continue
 
-            # Calculate rolling standard deviation
+            # Calculate rolling standard deviation and EMA
             rolling_std = df['price'].rolling(window=window).std()
+            ema = df['price'].ewm(span=window, adjust=False).mean()
 
-            # Calculate Bollinger Bands using EMA
-            df[f'upper_band_{window}'] = df['price'].ewm(span=window, adjust=False).mean() + 2 * rolling_std
-            df[f'lower_band_{window}'] = df['price'].ewm(span=window, adjust=False).mean() - 2 * rolling_std
+            # Add only relative Bollinger Bands
+            df[f'relative_upper_band_{window}'] = ((ema + 2 * rolling_std) - df['price']) / df['price'] * 100
+            df[f'relative_lower_band_{window}'] = ((ema - 2 * rolling_std) - df['price']) / df['price'] * 100
 
         return df
+
     
     ##########################################################################
     
@@ -614,6 +609,7 @@ class ClassificationFE(BaseFE):
 
     ##########################################################################
 
+    @process_dataframe_decorator
     def volatility(
             self, 
             df: pd.DataFrame, 
@@ -643,31 +639,37 @@ class ClassificationFE(BaseFE):
     
     ##########################################################################
     
+    @process_dataframe_decorator
     def moving_average_crossover(
             self, df: pd.DataFrame, 
             short_window: int = 10, 
             long_window: int = 50,
     ) -> pd.DataFrame:
-        """Calculate moving average crossovers.
+        """Calculate moving average crossovers as a binary feature.
         
         Parameters
         ----------
         df : pd.DataFrame
-            Input DataFrame with the target column.
-        n_window : list[int], optional
-            List of windows to calculate ROC for, by default None.
+            Input DataFrame with the target column ('price').
+        short_window : int, optional
+            Window size for the short-term EMA, by default 10.
+        long_window : int, optional
+            Window size for the long-term EMA, by default 50.
 
         Returns
         -------
         pd.DataFrame
-            DataFrame with added ROC columns.
+            DataFrame with a binary 'ma_crossover' column indicating the crossover.
         """
-        df['short_ema'] = df['price'].ewm(span=short_window, adjust=False).mean()
-        df['long_ema'] = df['price'].ewm(span=long_window, adjust=False).mean()
-        
-        # 1 if short > long, else 0
-        df['ma_crossover'] = (df['short_ema'] > df['long_ema']).astype(int)
+        # Calculate short-term and long-term EMAs
+        short_ema = df['price'].ewm(span=short_window, adjust=False).mean()
+        long_ema = df['price'].ewm(span=long_window, adjust=False).mean()
+
+        # Binary feature: 1 if short_ema > long_ema, otherwise 0
+        df['ma_crossover'] = (short_ema > long_ema).astype(int)
+
         return df
+
 
     ##########################################################################
     

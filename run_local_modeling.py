@@ -31,7 +31,7 @@ def train_model() -> None:
         "percent_diff_ema",
         "macd",
         "roc",
-        # "bollinger_bands",
+        "bollinger_bands",
         "volatility",
         "moving_average_crossover",
     ]
@@ -147,8 +147,9 @@ def eval_model(path: str, type: str) -> None:
 ##############################################################################
 
 if __name__ == "__main__":
-    
-    # train_model()
+    """
+    train_model()
+    """
     """
     model_type_list = ["catboost", "knn", "logistic_regression", "random_forest", "xgboost"]
     result_path =  "test-mutual-feature_20240803_191220"
@@ -159,8 +160,7 @@ if __name__ == "__main__":
     """
     
     
-    result_path =  "roc_volt_macross_20241127_085609"
-    
+    result_path =  "roc_volt_macross_20241229_184509"
     test_model(result_path, 'xgboost')
     
     """
